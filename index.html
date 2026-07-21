@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoomFlow - 智慧空房管理平台</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Quicksand & Nunito for rounded, friendly appearance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Quicksand', 'Nunito', 'Microsoft JhengHei', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        },
+                        vacant: '#10b981', // 湖水綠 (空房)
+                        booked: '#f97316', // 暖粉橘 (已定)
+                        maintenance: '#6b7280' // 中性灰 (整理中)
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Quicksand', 'Nunito', 'Microsoft JhengHei', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom scrollbar for a cleaner feel */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-700 antialiased flex flex-col">
+
+    <!-- Header Navbar -->
+    <header class="bg-white border-b border-sky-100/80 sticky top-0 z-40 backdrop-blur-md bg-white/90">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-brand-500 rounded-2xl flex items-center justify-center text-white shadow-md shadow-brand-200">
+                    <i class="fa-solid fa-hotel text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold tracking-tight text-slate-800">Room<span class="text-brand-500">Flow</span></span>
+                    <span class="block text-[10px] text-slate-400 -mt-1 tracking-wider uppercase font-semibold">Hotel Companion</span>
+                </div>
+            </div>
+
+            <!-- Central Mode Toggles -->
+            <div class="bg-slate-100 p-1 rounded-2xl flex items-center space-x-1">
+                <button id="btn-guest-view" onclick="switchView('guest')" class="px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-brand-600 shadow-sm flex items-center space-x-2">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                    <span>旅客前台</span>
+                </button>
+                <button id="btn-admin-view" onclick="switchView('admin')" class="px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span>員工後台</span>
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-3">
+                <!-- 學習日誌按鈕已移除 -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
+        
+        <!-- Sidebar - Filter Panel & Status Board -->
+        <aside class="w-full lg:w-80 flex flex-col gap-6 shrink-0">
+            <!-- Dynamic Helper Banner -->
+            <div id="role-banner" class="bg-gradient-to-br from-brand-500 to-sky-400 p-5 rounded-3xl text-white shadow-xl shadow-brand-100 relative overflow-hidden">
+                <div class="absolute -right-8 -bottom-8 opacity-10 text-9xl">
+                    <i class="fa-solid fa-umbrella-beach"></i>
+                </div>
+                <h3 class="font-bold text-lg mb-1 flex items-center gap-2">
+                    <span id="role-title">旅客模式 🧳</span>
+                </h3>
+                <p id="role-desc" class="text-xs text-white/90 leading-relaxed">
+                    您可以即時查看空房、挑選喜愛的房型、並在線上模擬完成預約訂房！
+                </p>
+                <div id="admin-summary" class="hidden mt-3 pt-3 border-t border-white/20 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div>
+                        <div id="sum-vacant" class="font-bold text-base">0</div>
+                        <div class="opacity-85">空房中</div>
+                    </div>
+                    <div>
+                        <div id="sum-booked" class="font-bold text-base">0</div>
+                        <div class="opacity-85">已預訂</div>
+                    </div>
+                    <div>
+                        <div id="sum-clean" class="font-bold text-base">0</div>
+                        <div class="opacity-85">整理中</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Filter / Quick Action Card -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-5">
+                <div class="border-b border-slate-100 pb-3">
+                    <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-brand-500"></i>
+                        <span>篩選與搜尋</span>
+                    </h4>
+                </div>
+
+                <!-- Date Range Selectors -->
+                <div class="flex flex-col gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">入住日期</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-calendar absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                            <input type="date" id="filter-checkin" onchange="filterRooms()" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-700 font-medium">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">退房日期</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-calendar-check absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                            <input type="date" id="filter-checkout" onchange="filterRooms()" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-700 font-medium">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Room Type Filters -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">房型篩選</label>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="toggleTypeFilter('All')" id="btn-filter-all" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-50 text-brand-600 border border-brand-100 transition-all">
+                            全部房型
+                        </button>
+                        <button onclick="toggleTypeFilter('Single')" id="btn-filter-single" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all">
+                            單人房
+                        </button>
+                        <button onclick="toggleTypeFilter('Double')" id="btn-filter-double" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all">
+                            雙人房
+                        </button>
+                        <button onclick="toggleTypeFilter('Family')" id="btn-filter-family" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all">
+                            家庭房
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Legend -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-2.5 uppercase">房間狀態說明</label>
+                    <div class="flex flex-col gap-2.5">
+                        <div class="flex items-center text-xs font-semibold text-slate-600">
+                            <span class="w-3.5 h-3.5 rounded-full bg-vacant mr-3 shadow-sm shadow-emerald-200"></span>
+                            <span>可供入住 (Vacant)</span>
+                        </div>
+                        <div class="flex items-center text-xs font-semibold text-slate-600">
+                            <span class="w-3.5 h-3.5 rounded-full bg-booked mr-3 shadow-sm shadow-orange-200"></span>
+                            <span>已有人住 / 已預訂 (Booked)</span>
+                        </div>
+                        <div class="flex items-center text-xs font-semibold text-slate-600">
+                            <span class="w-3.5 h-3.5 rounded-full bg-maintenance mr-3 shadow-sm shadow-gray-200"></span>
+                            <span>清潔維護中 (Cleaning)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Counter and Simulation Status -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-3xl shadow-lg flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">我的模擬預訂</span>
+                    <span id="booking-badge" class="bg-brand-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black">0 間</span>
+                </div>
+                <div id="booking-cart-list" class="text-xs text-slate-300 py-1 flex flex-col gap-2 max-h-36 overflow-y-auto pr-1">
+                    <p class="text-slate-400 italic text-center py-4">目前尚未預訂任何客房</p>
+                </div>
+                <div id="booking-cart-total" class="hidden border-t border-slate-700 pt-2 mt-1 flex justify-between items-center">
+                    <span class="text-xs text-slate-400">模擬總計</span>
+                    <span class="font-extrabold text-sm text-brand-400" id="cart-total-price">NT$ 0</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area: Rooms Inventory Dashboard -->
+        <section class="flex-grow flex flex-col gap-6">
+            <!-- Controls bar: Search & Sorting -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <!-- Search bar -->
+                <div class="relative w-full sm:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-room" oninput="filterRooms()" placeholder="輸入房號或名稱搜尋..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all font-medium">
+                </div>
+
+                <!-- Admin Action Buttons (Visible only in Admin Mode) -->
+                <div id="admin-actions" class="hidden w-full sm:w-auto flex items-center justify-end gap-3">
+                    <button onclick="toggleModal('add-room-modal')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md shadow-brand-100 transition-all">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>新增房客客房</span>
+                    </button>
+                </div>
+
+                <!-- Info labels inside guest view -->
+                <div id="guest-infobar" class="text-xs text-slate-400 font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-brand-500"></i>
+                    <span>點擊卡片上的「立即預訂」即可更換房間狀態！</span>
+                </div>
+            </div>
+
+            <!-- Dynamic Room Cards Grid -->
+            <div id="room-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <!-- Dynamic cards injected here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden bg-white rounded-3xl border border-slate-100 p-12 text-center flex flex-col items-center justify-center gap-4">
+                <div class="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center text-3xl">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-700 text-base">找不到相符的客房</h4>
+                    <p class="text-sm text-slate-400 mt-1">請嘗試調整您的篩選條件、房型，或重新輸入搜尋字眼。</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Booking Confirmation Modal -->
+    <div id="booking-modal" class="fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full overflow-hidden transform scale-95 transition-all duration-300">
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h3 class="font-extrabold text-lg text-slate-800 mb-1">預訂確認</h3>
+                <p class="text-xs text-slate-400" id="book-modal-subtitle">感謝您使用 RoomFlow 線上系統</p>
+                
+                <div class="bg-slate-50 p-4 rounded-2xl my-5 text-left space-y-2 text-xs">
+                    <div class="flex justify-between"><span class="text-slate-400">預訂房號：</span><span class="font-bold text-slate-800" id="book-modal-room">101</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">客房名稱：</span><span class="font-bold text-slate-800" id="book-modal-name">Cozy Nest</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">每日房價：</span><span class="font-bold text-brand-600" id="book-modal-price">NT$ 2,200</span></div>
+                    <div class="flex justify-between border-t border-slate-200/60 pt-2"><span class="text-slate-400">預計行程：</span><span class="font-bold text-slate-700" id="book-modal-dates">尚未指定日期</span></div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="toggleModal('booking-modal')" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-2xl transition-all">
+                        取消
+                    </button>
+                    <button onclick="confirmBooking()" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-2xl transition-all shadow-md shadow-brand-100">
+                        確認並佔位
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin: Add Room Modal -->
+    <div id="add-room-modal" class="fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full overflow-hidden transform scale-95 transition-all duration-300">
+            <!-- Header -->
+            <div class="bg-slate-950 p-6 text-white relative">
+                <button onclick="toggleModal('add-room-modal')" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <h3 class="font-extrabold text-base">新增旅宿客房</h3>
+                <p class="text-xs text-slate-400">建立全新的精緻房源資訊</p>
+            </div>
+
+            <!-- Form -->
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">房號 (必填)</label>
+                        <input type="text" id="new-room-id" placeholder="如 203" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">客房名稱</label>
+                        <input type="text" id="new-room-name" placeholder="如 海景雙人套房" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">房型分類</label>
+                        <select id="new-room-type" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium">
+                            <option value="Single">單人房</option>
+                            <option value="Double" selected>雙人房</option>
+                            <option value="Family">家庭房</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">每日定價 (TWD)</label>
+                        <input type="number" id="new-room-price" placeholder="2800" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">設備特色 (逗號分隔)</label>
+                    <input type="text" id="new-room-tags" placeholder="加大雙人床, 獨立陽台, 膠囊咖啡機" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium">
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="toggleModal('add-room-modal')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">
+                        取消
+                    </button>
+                    <button onclick="addNewRoom()" class="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-brand-100">
+                        確認新增
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast-notif" class="fixed bottom-5 right-5 bg-slate-800 text-white text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-2.5 translate-y-24 opacity-0 transition-all duration-300 z-50">
+        <i class="fa-solid fa-circle-info text-brand-400 text-sm"></i>
+        <span id="toast-text" class="font-bold">系統通知訊息</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-100 py-6 mt-12 text-center text-xs text-slate-400">
+        <p>© 2026 RoomFlow 空房管理平台. 專為 0714 學習日誌構想打造.</p>
+    </footer>
+
+    <script>
+        // Default Room Database (Mock state)
+        let rooms = [
+            { id: '101', name: '漫步晨曦單人客房', type: 'Single', price: 1800, status: 'vacant', tags: ['極簡空間', '單人加大', '免費WiFi'], occupant: '', checkinDate: '', checkoutDate: '' },
+            { id: '102', name: '北歐微光雙人雅緻房', type: 'Double', price: 2600, status: 'vacant', tags: ['加大雙人床', '藍牙音響', '景觀大窗'], occupant: '', checkinDate: '', checkoutDate: '' },
+            { id: '103', name: '島嶼度假雙人套房', type: 'Double', price: 3200, status: 'booked', tags: ['附浴缸', '香氛噴霧', '附迎賓點心'], occupant: '林先生', checkinDate: '2026-07-14', checkoutDate: '2026-07-16' },
+            { id: '201', name: '星空私語頂樓家庭房', type: 'Family', price: 4800, status: 'vacant', tags: ['投影劇院', '雙衛浴', '特大雙人床*2'], occupant: '', checkinDate: '', checkoutDate: '' },
+            { id: '202', name: '日式和風榻榻米家庭房', type: 'Family', price: 4200, status: 'maintenance', tags: ['塌塌米', '手沖茶具', '獨立陽台'], occupant: '', checkinDate: '', checkoutDate: '' },
+            { id: '205', name: '靜謐角落單人舒眠房', type: 'Single', price: 1500, status: 'vacant', tags: ['降噪抗噪', '人體工學枕', '工作書桌'], occupant: '', checkinDate: '', checkoutDate: '' }
+        ];
+
+        // App state variables
+        let currentView = 'guest'; // 'guest' or 'admin'
+        let currentTypeFilter = 'All';
+        let pendingBookingRoom = null;
+        let myBookedRooms = []; // Stores the simulated user's bookings
+
+        // Setup Dates default inputs to current date
+        window.onload = function() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            document.getElementById('filter-checkin').value = today.toISOString().split('T')[0];
+            document.getElementById('filter-checkout').value = tomorrow.toISOString().split('T')[0];
+
+            // Render rooms list and display initial dashboard
+            renderRooms();
+            updateSummaryCounters();
+        }
+
+        // Toggle view between Guest (旅客) and Admin (員工)
+        function switchView(view) {
+            currentView = view;
+            
+            const btnGuest = document.getElementById('btn-guest-view');
+            const btnAdmin = document.getElementById('btn-admin-view');
+            const banner = document.getElementById('role-banner');
+            const roleTitle = document.getElementById('role-title');
+            const roleDesc = document.getElementById('role-desc');
+            const adminSummary = document.getElementById('admin-summary');
+            const adminActions = document.getElementById('admin-actions');
+            const guestInfo = document.getElementById('guest-infobar');
+
+            if (view === 'guest') {
+                // Style Guest View Active
+                btnGuest.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-brand-600 shadow-sm flex items-center space-x-2";
+                btnAdmin.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2";
+                
+                // Content Switch
+                banner.className = "bg-gradient-to-br from-brand-500 to-sky-400 p-5 rounded-3xl text-white shadow-xl shadow-brand-100 relative overflow-hidden";
+                roleTitle.innerText = "旅客模式 🧳";
+                roleDesc.innerText = "您可以即時查看空房、挑選喜愛的房型、並在線上模擬完成預約訂房！";
+                adminSummary.classList.add('hidden');
+                adminActions.classList.add('hidden');
+                guestInfo.classList.remove('hidden');
+                
+                showToast("已切換至 旅客前台 模式");
+            } else {
+                // Style Admin View Active
+                btnAdmin.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-slate-800 shadow-sm flex items-center space-x-2";
+                btnGuest.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2";
+                
+                // Content Switch
+                banner.className = "bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-3xl text-white shadow-xl shadow-slate-100 relative overflow-hidden";
+                roleTitle.innerText = "員工後台 🛠️";
+                roleDesc.innerText = "客房調配儀表板。您可以隨時切換房間狀態（空房、整理中、保留已訂）或修改定價。";
+                adminSummary.classList.remove('hidden');
+                adminActions.classList.remove('hidden');
+                guestInfo.classList.add('hidden');
+
+                showToast("已進入 員工控房後台");
+            }
+
+            renderRooms();
+            updateSummaryCounters();
+        }
+
+        // Toggle Type Filter Buttons UI state
+        function toggleTypeFilter(type) {
+            currentTypeFilter = type;
+            const buttons = {
+                All: document.getElementById('btn-filter-all'),
+                Single: document.getElementById('btn-filter-single'),
+                Double: document.getElementById('btn-filter-double'),
+                Family: document.getElementById('btn-filter-family')
+            };
+
+            Object.keys(buttons).forEach(key => {
+                if (key === type) {
+                    buttons[key].className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-50 text-brand-600 border border-brand-100 transition-all";
+                } else {
+                    buttons[key].className = "px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all";
+                }
+            });
+
+            filterRooms();
+        }
+
+        // Core room rendering logic with Dynamic HTML Generation
+        function renderRooms() {
+            const grid = document.getElementById('room-grid');
+            const emptyState = document.getElementById('empty-state');
+            const searchQuery = document.getElementById('search-room').value.toLowerCase().trim();
+            
+            // Filters values
+            const checkin = document.getElementById('filter-checkin').value;
+            const checkout = document.getElementById('filter-checkout').value;
+
+            // Filter logic
+            const filtered = rooms.filter(room => {
+                // Type filter
+                if (currentTypeFilter !== 'All' && room.type !== currentTypeFilter) return false;
+                
+                // Text search filter
+                if (searchQuery) {
+                    const matchesSearch = room.id.includes(searchQuery) || room.name.toLowerCase().includes(searchQuery) || room.tags.some(tag => tag.toLowerCase().includes(searchQuery));
+                    if (!matchesSearch) return false;
+                }
+
+                return true;
+            });
+
+            // Empty state display
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                grid.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+            }
+
+            // HTML string building
+            grid.innerHTML = filtered.map(room => {
+                // Determine Status Badge & color theme
+                let statusColor, statusLabel, actionButtonHTML;
+
+                if (room.status === 'vacant') {
+                    statusColor = 'bg-emerald-500 text-white';
+                    statusLabel = '<i class="fa-solid fa-circle-check mr-1.5"></i> 空房中';
+                    
+                    if (currentView === 'guest') {
+                        actionButtonHTML = `
+                            <button onclick="openBookingModal('${room.id}')" class="w-full bg-brand-50 hover:bg-brand-100 text-brand-600 font-extrabold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-calendar-plus"></i>
+                                <span>立即預訂</span>
+                            </button>
+                        `;
+                    } else {
+                        // Admin: Toggle to other states
+                        actionButtonHTML = `
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button onclick="changeRoomStatus('${room.id}', 'booked')" class="bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold text-[10px] py-1.5 rounded-lg transition-all">設為已訂</button>
+                                <button onclick="changeRoomStatus('${room.id}', 'maintenance')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] py-1.5 rounded-lg transition-all">設為維護</button>
+                            </div>
+                        `;
+                    }
+                } else if (room.status === 'booked') {
+                    statusColor = 'bg-orange-500 text-white';
+                    statusLabel = `<i class="fa-solid fa-user-lock mr-1.5"></i> 已預訂 (${room.occupant || '旅客'})`;
+
+                    if (currentView === 'guest') {
+                        actionButtonHTML = `
+                            <button disabled class="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-lock"></i>
+                                <span>已被客滿</span>
+                            </button>
+                        `;
+                    } else {
+                        actionButtonHTML = `
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button onclick="changeRoomStatus('${room.id}', 'vacant')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] py-1.5 rounded-lg transition-all">釋出房源</button>
+                                <button onclick="changeRoomStatus('${room.id}', 'maintenance')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-[10px] py-1.5 rounded-lg transition-all">設為維護</button>
+                            </div>
+                        `;
+                    }
+                } else {
+                    statusColor = 'bg-slate-500 text-white';
+                    statusLabel = '<i class="fa-solid fa-broom mr-1.5"></i> 清潔整理中';
+
+                    if (currentView === 'guest') {
+                        actionButtonHTML = `
+                            <button disabled class="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-screwdriver-wrench"></i>
+                                <span>清潔維護中</span>
+                            </button>
+                        `;
+                    } else {
+                        actionButtonHTML = `
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button onclick="changeRoomStatus('${room.id}', 'vacant')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 font-bold text-[10px] py-1.5 rounded-lg transition-all">完成整理</button>
+                                <button onclick="changeRoomStatus('${room.id}', 'booked')" class="bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold text-[10px] py-1.5 rounded-lg transition-all">直接入住</button>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Room Type Icon Mapping
+                let typeIcon = 'fa-bed';
+                let typeLabel = '雙人房';
+                if (room.type === 'Single') { typeIcon = 'fa-user-clock'; typeLabel = '單人套房'; }
+                if (room.type === 'Family') { typeIcon = 'fa-people-roof'; typeLabel = '精緻家庭房'; }
+
+                // Tag elements
+                const tagsHTML = room.tags.map(tag => `<span class="bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-400">${tag}</span>`).join('');
+
+                // Custom Unsplash-like placeholder images depending on room type to ensure aesthetic excellence
+                let roomImage = `https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=400&q=80`; // Default Double
+                if (room.type === 'Single') roomImage = `https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=400&q=80`;
+                if (room.type === 'Family') roomImage = `https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=400&q=80`;
+
+                return `
+                    <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col group">
+                        <!-- Card Image Header -->
+                        <div class="relative h-44 overflow-hidden shrink-0">
+                            <img src="${roomImage}" alt="${room.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.onerror=null; this.src='https://placehold.co/400x200/e2e8f0/64748b?text=Room+Image'">
+                            <!-- Status Overlay Badge -->
+                            <div class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-black shadow-md ${statusColor}">
+                                ${statusLabel}
+                            </div>
+                            <!-- Room Number Badge -->
+                            <div class="absolute bottom-4 left-4 bg-slate-900/75 backdrop-blur-sm text-white font-extrabold text-xs px-3 py-1 rounded-xl">
+                                房號 ${room.id}
+                            </div>
+                        </div>
+
+                        <!-- Card Body -->
+                        <div class="p-5 flex-grow flex flex-col justify-between">
+                            <div class="space-y-2 mb-4">
+                                <div class="flex items-center space-x-1.5 text-brand-600 font-bold text-[11px] uppercase tracking-wider">
+                                    <i class="fa-solid ${typeIcon}"></i>
+                                    <span>${typeLabel}</span>
+                                </div>
+                                <h3 class="font-bold text-slate-800 text-sm line-clamp-1">${room.name}</h3>
+                                <!-- Facilities tags -->
+                                <div class="flex flex-wrap gap-1">
+                                    ${tagsHTML}
+                                </div>
+                            </div>
+
+                            <!-- Footer Section inside card -->
+                            <div class="border-t border-slate-100/80 pt-3.5 flex flex-col gap-3">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">每晚房價</span>
+                                    <span class="font-black text-slate-800 text-lg">NT$ ${room.price.toLocaleString()}<span class="text-xs font-bold text-slate-400"> / 晚</span></span>
+                                </div>
+                                
+                                <div class="w-full">
+                                    ${actionButtonHTML}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Handle quick filter changes
+        function filterRooms() {
+            renderRooms();
+        }
+
+        // Toggle Modal Displays helper
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal.classList.contains('opacity-0')) {
+                modal.classList.remove('opacity-0', 'pointer-events-none');
+                modal.children[0].classList.remove('scale-95');
+                modal.children[0].classList.add('scale-100');
+            } else {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+                modal.children[0].classList.remove('scale-100');
+                modal.children[0].classList.add('scale-95');
+            }
+        }
+
+        // Trigger Guest Booking Modal with populated details
+        function openBookingModal(roomId) {
+            const checkin = document.getElementById('filter-checkin').value;
+            const checkout = document.getElementById('filter-checkout').value;
+
+            if (!checkin || !checkout) {
+                showToast("⚠️ 請先選擇欲預訂的 入住 與 退房 日期！");
+                return;
+            }
+
+            const room = rooms.find(r => r.id === roomId);
+            if (!room) return;
+
+            pendingBookingRoom = room;
+
+            document.getElementById('book-modal-room').innerText = room.id;
+            document.getElementById('book-modal-name').innerText = room.name;
+            document.getElementById('book-modal-price').innerText = `NT$ ${room.price.toLocaleString()}`;
+            document.getElementById('book-modal-dates').innerText = `${checkin} 至 ${checkout}`;
+
+            toggleModal('booking-modal');
+        }
+
+        // Commit Guest Simulated Booking
+        function confirmBooking() {
+            if (!pendingBookingRoom) return;
+
+            const checkin = document.getElementById('filter-checkin').value;
+            const checkout = document.getElementById('filter-checkout').value;
+
+            // Update local memory state
+            const targetRoom = rooms.find(r => r.id === pendingBookingRoom.id);
+            targetRoom.status = 'booked';
+            targetRoom.occupant = '模擬旅客 (您)';
+            targetRoom.checkinDate = checkin;
+            targetRoom.checkoutDate = checkout;
+
+            // Add to simulated cart/booking log
+            myBookedRooms.push({
+                id: targetRoom.id,
+                name: targetRoom.name,
+                price: targetRoom.price,
+                checkin,
+                checkout
+            });
+
+            // Close modal and refresh layouts
+            toggleModal('booking-modal');
+            renderRooms();
+            updateSummaryCounters();
+            updateCartUI();
+            
+            showToast(`🎉 成功預訂 房號 ${targetRoom.id}！`);
+            pendingBookingRoom = null;
+        }
+
+        // Admin: Direct change room status
+        function changeRoomStatus(roomId, newStatus) {
+            const targetRoom = rooms.find(r => r.id === roomId);
+            if (!targetRoom) return;
+
+            targetRoom.status = newStatus;
+            if (newStatus === 'vacant') {
+                targetRoom.occupant = '';
+                targetRoom.checkinDate = '';
+                targetRoom.checkoutDate = '';
+            } else if (newStatus === 'booked') {
+                targetRoom.occupant = '現場安排旅客';
+                targetRoom.checkinDate = '2026-07-14';
+                targetRoom.checkoutDate = '2026-07-15';
+            }
+
+            renderRooms();
+            updateSummaryCounters();
+            showToast(`房號 ${roomId} 已變更為「${newStatus === 'vacant' ? '空房' : newStatus === 'booked' ? '已訂' : '維護'}」`);
+        }
+
+        // Admin: Add new Room dynamically
+        function addNewRoom() {
+            const id = document.getElementById('new-room-id').value.trim();
+            const name = document.getElementById('new-room-name').value.trim() || `精緻套房 ${id}`;
+            const type = document.getElementById('new-room-type').value;
+            const priceVal = document.getElementById('new-room-price').value.trim();
+            const tagsInput = document.getElementById('new-room-tags').value.trim();
+
+            if (!id) {
+                showToast("⚠️ 請輸入房號！");
+                return;
+            }
+
+            if (rooms.some(r => r.id === id)) {
+                showToast("⚠️ 此房號已存在！");
+                return;
+            }
+
+            const price = priceVal ? parseInt(priceVal) : (type === 'Single' ? 1500 : type === 'Double' ? 2500 : 4000);
+            const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()) : ['全新裝修', '備品齊全'];
+
+            rooms.push({
+                id,
+                name,
+                type,
+                price,
+                status: 'vacant',
+                tags,
+                occupant: '',
+                checkinDate: '',
+                checkoutDate: ''
+            });
+
+            // Clear inputs
+            document.getElementById('new-room-id').value = '';
+            document.getElementById('new-room-name').value = '';
+            document.getElementById('new-room-price').value = '';
+            document.getElementById('new-room-tags').value = '';
+
+            toggleModal('add-room-modal');
+            renderRooms();
+            updateSummaryCounters();
+            showToast(`✨ 成功新增客房 ${id} - ${name}！`);
+        }
+
+        // Sync and Calculate counters
+        function updateSummaryCounters() {
+            const vacantCount = rooms.filter(r => r.status === 'vacant').length;
+            const bookedCount = rooms.filter(r => r.status === 'booked').length;
+            const cleanCount = rooms.filter(r => r.status === 'maintenance').length;
+
+            document.getElementById('sum-vacant').innerText = vacantCount;
+            document.getElementById('sum-booked').innerText = bookedCount;
+            document.getElementById('sum-clean').innerText = cleanCount;
+        }
+
+        // Sync Sim Cart UI
+        function updateCartUI() {
+            const cartList = document.getElementById('booking-cart-list');
+            const cartTotal = document.getElementById('booking-cart-total');
+            const totalVal = document.getElementById('cart-total-price');
+            const badge = document.getElementById('booking-badge');
+
+            badge.innerText = `${myBookedRooms.length} 間`;
+
+            if (myBookedRooms.length === 0) {
+                cartList.innerHTML = `<p class="text-slate-400 italic text-center py-4">目前尚未預訂任何客房</p>`;
+                cartTotal.classList.add('hidden');
+                return;
+            }
+
+            cartTotal.classList.remove('hidden');
+
+            let totalSum = 0;
+            let cartHTML = myBookedRooms.map((bk, idx) => {
+                totalSum += bk.price;
+                return `
+                    <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700/50 flex justify-between items-center group">
+                        <div class="truncate">
+                            <div class="font-extrabold flex items-center gap-1">
+                                <span class="bg-brand-500 text-[10px] text-white px-1.5 py-0.2 rounded-md font-black">${bk.id}</span>
+                                <span class="truncate text-slate-100">${bk.name}</span>
+                            </div>
+                            <div class="text-[9px] text-slate-400 mt-0.5">${bk.checkin} - ${bk.checkout}</div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="font-bold text-brand-400">NT$ ${bk.price.toLocaleString()}</div>
+                            <button onclick="cancelMyBooking(${idx})" class="text-[9px] text-rose-400 hover:text-rose-300 font-extrabold underline block ml-auto mt-0.5">退訂</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            cartList.innerHTML = cartHTML;
+            totalVal.innerText = `NT$ ${totalSum.toLocaleString()}`;
+        }
+
+        // Cancel simulated booking from myCart list
+        function cancelMyBooking(idx) {
+            const removed = myBookedRooms[idx];
+            
+            // Revert state in rooms list
+            const matched = rooms.find(r => r.id === removed.id);
+            if (matched) {
+                matched.status = 'vacant';
+                matched.occupant = '';
+                matched.checkinDate = '';
+                matched.checkoutDate = '';
+            }
+
+            myBookedRooms.splice(idx, 1);
+            
+            renderRooms();
+            updateSummaryCounters();
+            updateCartUI();
+            showToast(`已為您退訂 ${removed.id} 房`);
+        }
+
+        // Helper Notification Toast message
+        function showToast(msg) {
+            const toast = document.getElementById('toast-notif');
+            const text = document.getElementById('toast-text');
+            
+            text.innerText = msg;
+            
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
