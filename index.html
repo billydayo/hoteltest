@@ -3,139 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Roomify - 旅館空房管理平台</title>
-    <!-- Google Fonts: 圓潤字體 Nunito & Quicksand -->
+    <title>RoomFlow - 智慧空房管理平台</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Quicksand & Nunito for rounded, friendly appearance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome 圖示庫 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Header Navigation -->
-    <header class="navbar">
-        <div class="logo">
-            <i class="fa-solid fa-hotel"></i>
-            <span>Roomify</span>
-        </div>
-        
-        <div class="mode-toggle">
-            <button id="guest-mode-btn" class="active"><i class="fa-solid fa-user"></i> 旅客搜尋前台</button>
-            <button id="admin-mode-btn"><i class="fa-solid fa-user-gear"></i> 旅館管理後台</button>
+    <!-- 外部 CSS 檔案 -->
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Quicksand', 'Nunito', 'Microsoft JhengHei', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                        },
+                        vacant: '#10b981', // 湖水綠 (空房)
+                        booked: '#f97316', // 暖粉橘 (已定)
+                        maintenance: '#6b7280' // 中性灰 (整理中)
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen text-slate-700 antialiased flex flex-col">
+
+    <!-- Header Navbar -->
+    <header class="bg-white border-b border-sky-100/80 sticky top-0 z-40 backdrop-blur-md bg-white/90">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-brand-500 rounded-2xl flex items-center justify-center text-white shadow-md shadow-brand-200">
+                    <i class="fa-solid fa-hotel text-lg"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold tracking-tight text-slate-800">Room<span class="text-brand-500">Flow</span></span>
+                    <span class="block text-[10px] text-slate-400 -mt-1 tracking-wider uppercase font-semibold">Hotel Companion</span>
+                </div>
+            </div>
+
+            <!-- Central Mode Toggles -->
+            <div class="bg-slate-100 p-1 rounded-2xl flex items-center space-x-1">
+                <button id="btn-guest-view" onclick="switchView('guest')" class="px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-brand-600 shadow-sm flex items-center space-x-2">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                    <span>旅客前台</span>
+                </button>
+                <button id="btn-admin-view" onclick="switchView('admin')" class="px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <span>員工後台</span>
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-3">
+                <!-- 學習日誌按鈕已移除 -->
+            </div>
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="container">
-
-        <!-- Search Bar (Guest Mode View) -->
-        <section id="guest-search-section" class="search-card">
-            <div class="search-group">
-                <label><i class="fa-regular fa-calendar-days"></i> 入住日期</label>
-                <input type="date" id="checkin-date">
-            </div>
-            <div class="search-group">
-                <label><i class="fa-regular fa-calendar-xmark"></i> 退房日期</label>
-                <input type="date" id="checkout-date">
-            </div>
-            <div class="search-group">
-                <label><i class="fa-solid fa-bed"></i> 房型選取</label>
-                <select id="type-filter">
-                    <option value="all">所有房型</option>
-                    <option value="single">單人房</option>
-                    <option value="double">雙人房</option>
-                    <option value="suite">景觀套房</option>
-                    <option value="family">家庭四人房</option>
-                </select>
-            </div>
-            <button id="search-btn" class="btn btn-primary"><i class="fa-solid fa-magnifying-glass"></i> 搜尋空房</button>
-        </section>
-
-        <!-- Admin Control Header (Admin Mode View) -->
-        <section id="admin-control-section" class="admin-panel hidden">
-            <div class="admin-info">
-                <h2><i class="fa-solid fa-sliders"></i> 客房管理面板</h2>
-                <p>輕鬆調整客房狀態、價格或新增房型（未來可搭配 SQL / MongoDB 後端系統）</p>
-            </div>
-            <button id="add-room-btn" class="btn btn-accent"><i class="fa-solid fa-plus"></i> 新增房間</button>
-        </section>
-
-        <!-- Room Grid -->
-        <section class="room-section">
-            <div class="section-header">
-                <h3><i class="fa-solid fa-list-check"></i> 客房列表與即時狀態</h3>
-                <div class="status-legend">
-                    <span class="legend available"><i class="fa-solid fa-circle"></i> 可預訂</span>
-                    <span class="legend booked"><i class="fa-solid fa-circle"></i> 已預訂</span>
-                    <span class="legend maintenance"><i class="fa-solid fa-circle"></i> 清潔/維護中</span>
+    <!-- Main Workspace Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row gap-8">
+        
+        <!-- Sidebar - Filter Panel & Status Board -->
+        <aside class="w-full lg:w-80 flex flex-col gap-6 shrink-0">
+            <!-- Dynamic Helper Banner -->
+            <div id="role-banner" class="bg-gradient-to-br from-brand-500 to-sky-400 p-5 rounded-3xl text-white shadow-xl shadow-brand-100 relative overflow-hidden">
+                <div class="absolute -right-8 -bottom-8 opacity-10 text-9xl">
+                    <i class="fa-solid fa-umbrella-beach"></i>
+                </div>
+                <h3 class="font-bold text-lg mb-1 flex items-center gap-2">
+                    <span id="role-title">旅客模式 🧳</span>
+                </h3>
+                <p id="role-desc" class="text-xs text-white/90 leading-relaxed">
+                    您可以即時查看空房、挑選喜愛的房型、並在線上模擬完成預約訂房！
+                </p>
+                <div id="admin-summary" class="hidden mt-3 pt-3 border-t border-white/20 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div>
+                        <div id="sum-vacant" class="font-bold text-base">0</div>
+                        <div class="opacity-85">空房中</div>
+                    </div>
+                    <div>
+                        <div id="sum-booked" class="font-bold text-base">0</div>
+                        <div class="opacity-85">已預訂</div>
+                    </div>
+                    <div>
+                        <div id="sum-clean" class="font-bold text-base">0</div>
+                        <div class="opacity-85">整理中</div>
+                    </div>
                 </div>
             </div>
 
-            <div id="room-grid" class="room-grid">
-                <!-- 由 script.js 動態渲染房間卡片 -->
+            <!-- Booking Filter / Quick Action Card -->
+            <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-5">
+                <div class="border-b border-slate-100 pb-3">
+                    <h4 class="font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-brand-500"></i>
+                        <span>篩選與搜尋</span>
+                    </h4>
+                </div>
+
+                <!-- Date Range Selectors -->
+                <div class="flex flex-col gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">入住日期</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-calendar absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                            <input type="date" id="filter-checkin" onchange="filterRooms()" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-700 font-medium">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">退房日期</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-calendar-check absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                            <input type="date" id="filter-checkout" onchange="filterRooms()" class="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all text-slate-700 font-medium">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Room Type Filters -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase">房型篩選</label>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button onclick="toggleTypeFilter('All')" id="btn-filter-all" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-50 text-brand-600 border border-brand-100 transition-all">
+                            全部房型
+                        </button>
+                        <button onclick="toggleTypeFilter('Single')" id="btn-filter-single" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all">
+                            單人房
+                        </button>
+                        <button onclick="toggleTypeFilter('Double')" id="btn-filter-double" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all">
+                            雙人房
+                        </button>
+                        <button onclick="toggleTypeFilter('Family')" id="btn-filter-family" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-600 transition-all">
+                            家庭房
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Legend -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 mb-2.5 uppercase">房間狀態說明</label>
+                    <div class="flex flex-col gap-2.5">
+                        <div class="flex items-center text-xs font-semibold text-slate-600">
+                            <span class="w-3.5 h-3.5 rounded-full bg-vacant mr-3 shadow-sm shadow-emerald-200"></span>
+                            <span>可供入住 (Vacant)</span>
+                        </div>
+                        <div class="flex items-center text-xs font-semibold text-slate-600">
+                            <span class="w-3.5 h-3.5 rounded-full bg-booked mr-3 shadow-sm shadow-orange-200"></span>
+                            <span>已有人住 / 已預訂 (Booked)</span>
+                        </div>
+                        <div class="flex items-center text-xs font-semibold text-slate-600">
+                            <span class="w-3.5 h-3.5 rounded-full bg-maintenance mr-3 shadow-sm shadow-gray-200"></span>
+                            <span>清潔維護中 (Cleaning)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Counter and Simulation Status -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-3xl shadow-lg flex flex-col gap-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">我的模擬預訂</span>
+                    <span id="booking-badge" class="bg-brand-500 text-white px-2.5 py-0.5 rounded-full text-[10px] font-black">0 間</span>
+                </div>
+                <div id="booking-cart-list" class="text-xs text-slate-300 py-1 flex flex-col gap-2 max-h-36 overflow-y-auto pr-1">
+                    <p class="text-slate-400 italic text-center py-4">目前尚未預訂任何客房</p>
+                </div>
+                <div id="booking-cart-total" class="hidden border-t border-slate-700 pt-2 mt-1 flex justify-between items-center">
+                    <span class="text-xs text-slate-400">模擬總計</span>
+                    <span class="font-extrabold text-sm text-brand-400" id="cart-total-price">NT$ 0</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area: Rooms Inventory Dashboard -->
+        <section class="flex-grow flex flex-col gap-6">
+            <!-- Controls bar: Search & Sorting -->
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <!-- Search bar -->
+                <div class="relative w-full sm:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-room" oninput="filterRooms()" placeholder="輸入房號或名稱搜尋..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all font-medium">
+                </div>
+
+                <!-- Admin Action Buttons (Visible only in Admin Mode) -->
+                <div id="admin-actions" class="hidden w-full sm:w-auto flex items-center justify-end gap-3">
+                    <button onclick="toggleModal('add-room-modal')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md shadow-brand-100 transition-all">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>新增房客客房</span>
+                    </button>
+                </div>
+
+                <!-- Info labels inside guest view -->
+                <div id="guest-infobar" class="text-xs text-slate-400 font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-brand-500"></i>
+                    <span>點擊卡片上的「立即預訂」即可更換房間狀態！</span>
+                </div>
+            </div>
+
+            <!-- Dynamic Room Cards Grid -->
+            <div id="room-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <!-- Dynamic cards injected here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden bg-white rounded-3xl border border-slate-100 p-12 text-center flex flex-col items-center justify-center gap-4">
+                <div class="w-20 h-20 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center text-3xl">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-700 text-base">找不到相符的客房</h4>
+                    <p class="text-sm text-slate-400 mt-1">請嘗試調整您的篩選條件、房型，或重新輸入搜尋字眼。</p>
+                </div>
             </div>
         </section>
-
     </main>
 
-    <!-- Booking Modal -->
-    <div id="booking-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn" id="close-booking-modal">&times;</span>
-            <h3 id="modal-room-title">預訂房間</h3>
-            <form id="booking-form">
-                <input type="hidden" id="modal-room-id">
-                <div class="form-group">
-                    <label>訂房人姓名</label>
-                    <input type="text" id="guest-name" placeholder="例如：張小明" required>
+    <!-- Booking Confirmation Modal -->
+    <div id="booking-modal" class="fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full overflow-hidden transform scale-95 transition-all duration-300">
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fa-solid fa-circle-check"></i>
                 </div>
-                <div class="form-group">
-                    <label>聯絡電話</label>
-                    <input type="tel" id="guest-phone" placeholder="0912-345-678" required>
+                <h3 class="font-extrabold text-lg text-slate-800 mb-1">預訂確認</h3>
+                <p class="text-xs text-slate-400" id="book-modal-subtitle">感謝您使用 RoomFlow 線上系統</p>
+                
+                <div class="bg-slate-50 p-4 rounded-2xl my-5 text-left space-y-2 text-xs">
+                    <div class="flex justify-between"><span class="text-slate-400">預訂房號：</span><span class="font-bold text-slate-800" id="book-modal-room">101</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">客房名稱：</span><span class="font-bold text-slate-800" id="book-modal-name">Cozy Nest</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">每日房價：</span><span class="font-bold text-brand-600" id="book-modal-price">NT$ 2,200</span></div>
+                    <div class="flex justify-between border-t border-slate-200/60 pt-2"><span class="text-slate-400">預計行程：</span><span class="font-bold text-slate-700" id="book-modal-dates">尚未指定日期</span></div>
                 </div>
-                <div class="form-group">
-                    <label>電子郵件</label>
-                    <input type="email" id="guest-email" placeholder="example@email.com" required>
+
+                <div class="flex gap-3">
+                    <button onclick="toggleModal('booking-modal')" class="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-2xl transition-all">
+                        取消
+                    </button>
+                    <button onclick="confirmBooking()" class="flex-1 py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-2xl transition-all shadow-md shadow-brand-100">
+                        確認並佔位
+                    </button>
                 </div>
-                <button type="submit" class="btn btn-primary btn-full">確認送出預訂</button>
-            </form>
+            </div>
         </div>
     </div>
 
-    <!-- Add Room Modal -->
-    <div id="add-room-modal" class="modal hidden">
-        <div class="modal-content">
-            <span class="close-btn" id="close-add-modal">&times;</span>
-            <h3>新增房間</h3>
-            <form id="add-room-form">
-                <div class="form-group">
-                    <label>房號</label>
-                    <input type="text" id="new-room-number" placeholder="例如：105" required>
+    <!-- Admin: Add Room Modal -->
+    <div id="add-room-modal" class="fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-white rounded-[32px] shadow-2xl max-w-md w-full overflow-hidden transform scale-95 transition-all duration-300">
+            <!-- Header -->
+            <div class="bg-slate-950 p-6 text-white relative">
+                <button onclick="toggleModal('add-room-modal')" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <h3 class="font-extrabold text-base">新增旅宿客房</h3>
+                <p class="text-xs text-slate-400">建立全新的精緻房源資訊</p>
+            </div>
+
+            <!-- Form -->
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">房號 (必填)</label>
+                        <input type="text" id="new-room-id" placeholder="如 203" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">客房名稱</label>
+                        <input type="text" id="new-room-name" placeholder="如 海景雙人套房" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>房型</label>
-                    <select id="new-room-type">
-                        <option value="single">單人房</option>
-                        <option value="double" selected>雙人房</option>
-                        <option value="suite">景觀套房</option>
-                        <option value="family">家庭四人房</option>
-                    </select>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">房型分類</label>
+                        <select id="new-room-type" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium">
+                            <option value="Single">單人房</option>
+                            <option value="Double" selected>雙人房</option>
+                            <option value="Family">家庭房</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">每日定價 (TWD)</label>
+                        <input type="number" id="new-room-price" placeholder="2800" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>每晚價格 (NT$)</label>
-                    <input type="number" id="new-room-price" placeholder="2500" min="500" required>
+
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">設備特色 (逗號分隔)</label>
+                    <input type="text" id="new-room-tags" placeholder="加大雙人床, 獨立陽台, 膠囊咖啡機" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-medium">
                 </div>
-                <div class="form-group">
-                    <label>圖片網址 (URL)</label>
-                    <input type="url" id="new-room-image" placeholder="https://images.unsplash.com/..." required>
+
+                <div class="flex gap-3 pt-2">
+                    <button onclick="toggleModal('add-room-modal')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">
+                        取消
+                    </button>
+                    <button onclick="addNewRoom()" class="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-brand-100">
+                        確認新增
+                    </button>
                 </div>
-                <button type="submit" class="btn btn-accent btn-full">儲存並建立客房</button>
-            </form>
+            </div>
         </div>
     </div>
 
+    <!-- Notification Toast -->
+    <div id="toast-notif" class="fixed bottom-5 right-5 bg-slate-800 text-white text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-2.5 translate-y-24 opacity-0 transition-all duration-300 z-50">
+        <i class="fa-solid fa-circle-info text-brand-400 text-sm"></i>
+        <span id="toast-text" class="font-bold">系統通知訊息</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-100 py-6 mt-12 text-center text-xs text-slate-400">
+        <p>© 2026 RoomFlow 空房管理平台. 專為 0714 學習日誌構想打造.</p>
+    </footer>
+
+    <!-- 外部 JS 檔案 -->
     <script src="script.js"></script>
 </body>
 </html>
