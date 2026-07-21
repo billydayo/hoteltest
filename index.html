@@ -344,11 +344,6 @@
         <span id="toast-text" class="font-bold">系統通知訊息</span>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-slate-100 py-6 mt-12 text-center text-xs text-slate-400">
-        <p>© 2026 RoomFlow 空房管理平台. 專為 0714 學習日誌構想打造.</p>
-    </footer>
-
     <script>
         // Default Room Database (Mock state)
         let rooms = [
@@ -515,7 +510,7 @@
                         actionButtonHTML = `
                             <button disabled class="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5">
                                 <i class="fa-solid fa-lock"></i>
-                                <span>已被客滿</span>
+                                <span>已客滿</span>
                             </button>
                         `;
                     } else {
