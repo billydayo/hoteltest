@@ -1,0 +1,389 @@
+/* 全局變數：色彩與風格控制 */
+:root {
+    --primary-color: #4A90E2;
+    --primary-light: #EBF3FA;
+    --accent-color: #FFB347;
+    --status-available: #48BB78;
+    --status-available-bg: #E6FFFA;
+    --status-booked: #F56565;
+    --status-booked-bg: #FFF5F5;
+    --status-maintenance: #ED8936;
+    --status-maintenance-bg: #FFFAF0;
+    --bg-color: #F4F7FA;
+    --card-bg: #FFFFFF;
+    --text-primary: #2D3748;
+    --text-secondary: #718096;
+    --border-radius: 16px;
+    --box-shadow: 0 8px 24px rgba(149, 157, 165, 0.12);
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 全局基底設定 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Nunito', 'Quicksand', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    padding-bottom: 50px;
+    line-height: 1.5;
+}
+
+/* 頂部導覽列 */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 32px;
+    background-color: var(--card-bg);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.mode-toggle {
+    display: flex;
+    background: var(--primary-light);
+    padding: 4px;
+    border-radius: 30px;
+}
+
+.mode-toggle button {
+    border: none;
+    background: transparent;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.mode-toggle button.active {
+    background: var(--primary-color);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+}
+
+/* 內容主要區域 */
+.container {
+    max-width: 1200px;
+    margin: 32px auto;
+    padding: 0 20px;
+}
+
+/* 按鈕風格 */
+.btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #357ABD;
+    transform: translateY(-2px);
+}
+
+.btn-accent {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.btn-accent:hover {
+    background-color: #FFA014;
+    transform: translateY(-2px);
+}
+
+.btn-full {
+    width: 100%;
+}
+
+/* 搜尋卡片 (前台) */
+.search-card {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) auto;
+    gap: 20px;
+    align-items: end;
+    margin-bottom: 32px;
+}
+
+.search-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.search-group label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.search-group input, .search-group select {
+    padding: 10px 14px;
+    border: 2px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    outline: none;
+    transition: var(--transition);
+}
+
+.search-group input:focus, .search-group select:focus {
+    border-color: var(--primary-color);
+}
+
+/* 管理控制台 (後台) */
+.admin-panel {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    border-left: 6px solid var(--accent-color);
+}
+
+.admin-info h2 {
+    font-size: 1.3rem;
+    color: var(--text-primary);
+}
+
+.admin-info p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* 客房顯示區 */
+.room-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.status-legend {
+    display: flex;
+    gap: 16px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend.available { color: var(--status-available); }
+.legend.booked { color: var(--status-booked); }
+.legend.maintenance { color: var(--status-maintenance); }
+
+/* 客房網格 */
+.room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.room-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+}
+
+.room-card:hover {
+    transform: translateY(-4px);
+}
+
+.room-img-wrapper {
+    position: relative;
+    height: 180px;
+}
+
+.room-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.status-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.status-badge.available {
+    background-color: var(--status-available-bg);
+    color: var(--status-available);
+}
+
+.status-badge.booked {
+    background-color: var(--status-booked-bg);
+    color: var(--status-booked);
+}
+
+.status-badge.maintenance {
+    background-color: var(--status-maintenance-bg);
+    color: var(--status-maintenance);
+}
+
+.room-info {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.room-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.room-number {
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.room-price {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--primary-color);
+}
+
+.room-type {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.room-actions {
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.admin-actions select {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #CBD5E0;
+    font-size: 0.85rem;
+}
+
+/* 彈出視窗 (Modal) */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--card-bg);
+    padding: 32px;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 440px;
+    position: relative;
+    box-shadow: var(--box-shadow);
+}
+
+.close-btn {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+.form-group input, .form-group select {
+    padding: 10px 14px;
+    border: 2px solid #E2E8F0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    outline: none;
+}
+
+.form-group input:focus, .form-group select:focus {
+    border-color: var(--primary-color);
+}
+
+/* 工具類別 */
+.hidden {
+    display: none !important;
+}
