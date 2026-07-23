@@ -1,37 +1,155 @@
-// Default Room Database (Mock state)
-let rooms = [
-    { id: '101', name: '漫步晨曦單人客房', type: 'Single', price: 1800, status: 'vacant', tags: ['極簡空間', '單人加大', '免費WiFi'], occupant: '', checkinDate: '', checkoutDate: '' },
-    { id: '102', name: '北歐微光雙人雅緻房', type: 'Double', price: 2600, status: 'vacant', tags: ['加大雙人床', '藍牙音響', '景觀大窗'], occupant: '', checkinDate: '', checkoutDate: '' },
-    { id: '103', name: '島嶼度假雙人套房', type: 'Double', price: 3200, status: 'booked', tags: ['附浴缸', '香氛噴霧', '附迎賓點心'], occupant: '林先生', checkinDate: '2026-07-14', checkoutDate: '2026-07-16' },
-    { id: '201', name: '星空私語頂樓家庭房', type: 'Family', price: 4800, status: 'vacant', tags: ['投影劇院', '雙衛浴', '特大雙人床*2'], occupant: '', checkinDate: '', checkoutDate: '' },
-    { id: '202', name: '日式和風榻榻米家庭房', type: 'Family', price: 4200, status: 'maintenance', tags: ['塌塌米', '手沖茶具', '獨立陽台'], occupant: '', checkinDate: '', checkoutDate: '' },
-    { id: '205', name: '靜謐角落單人舒眠房', type: 'Single', price: 1500, status: 'vacant', tags: ['降噪抗噪', '人體工學枕', '工作書桌'], occupant: '', checkinDate: '', checkoutDate: '' }
-];
+// ============================================================
+// Supabase 連線設定
+// 請將以下兩個值換成你自己 Supabase 專案的 Project URL 與 anon public key
+// (Supabase Dashboard → Project Settings → API)
+// ============================================================
+const SUPABASE_URL = 'https://ifggswbwqeanhlhhcbli.supabase.co/rest/v1/';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmZ2dzd2J3cWVhbmhsaGhjYmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NTU1MDQsImV4cCI6MjEwMDMzMTUwNH0.JYPzcC5t3is4PRdXU42E3iEeoXGiKKV8pRR3zCS4t_g';
+
+// persistSession 設為 false：不使用 localStorage 存放登入狀態，
+// 改為僅存在當前分頁的記憶體中（重新整理頁面需要重新登入）。
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false }
+});
 
 // App state variables
-let currentView = 'guest'; // 'guest' or 'admin'
+let rooms = [];               // 從 Supabase 讀取的房間資料
+let currentView = 'guest';    // 'guest' or 'admin'
 let currentTypeFilter = 'All';
 let pendingBookingRoom = null;
-let myBookedRooms = []; // Stores the simulated user's bookings
+let myBookedRooms = [];       // 本次瀏覽中，我(旅客)模擬預訂的房間清單（僅存於記憶體）
+let isAdminAuthed = false;    // 目前是否已通過員工登入驗證
+let realtimeChannel = null;
 
-// Setup Dates default inputs to current date
-window.onload = function() {
+// Setup Dates default inputs to current date + initial data load
+window.onload = async function() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     document.getElementById('filter-checkin').value = today.toISOString().split('T')[0];
     document.getElementById('filter-checkout').value = tomorrow.toISOString().split('T')[0];
 
-    // Render rooms list and display initial dashboard
+    await loadRooms();
+    subscribeRealtime();
+}
+
+// ============================================================
+// Supabase 資料存取
+// ============================================================
+
+// 從 Supabase 讀取所有房間資料
+async function loadRooms() {
+    const { data, error } = await supabaseClient
+        .from('rooms')
+        .select('*')
+        .order('id', { ascending: true });
+
+    if (error) {
+        showToast('⚠️ 讀取房間資料失敗：' + error.message);
+        return;
+    }
+
+    rooms = (data || []).map(r => ({
+        id: r.id,
+        name: r.name,
+        type: r.type,
+        price: r.price,
+        status: r.status,
+        tags: r.tags || [],
+        occupant: r.occupant || '',
+        checkinDate: r.checkin_date || '',
+        checkoutDate: r.checkout_date || ''
+    }));
+
     renderRooms();
     updateSummaryCounters();
 }
 
+// 訂閱 rooms 資料表的即時異動（其他分頁 / 使用者的操作會自動同步）
+// 需先在 Supabase Dashboard → Database → Replication 開啟 rooms 資料表的 Realtime
+function subscribeRealtime() {
+    if (realtimeChannel) return;
+
+    realtimeChannel = supabaseClient
+        .channel('rooms-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'rooms' }, () => {
+            loadRooms();
+        })
+        .subscribe();
+}
+
+// ============================================================
+// 員工登入 / 登出 (Supabase Auth)
+// ============================================================
+
+async function handleAdminLogin() {
+    const email = document.getElementById('admin-login-email').value.trim();
+    const password = document.getElementById('admin-login-password').value;
+    const errorEl = document.getElementById('admin-login-error');
+    const submitBtn = document.getElementById('admin-login-submit');
+
+    errorEl.classList.add('hidden');
+
+    if (!email || !password) {
+        errorEl.innerText = '請輸入信箱與密碼';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerText = '登入中...';
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+    submitBtn.disabled = false;
+    submitBtn.innerText = '登入';
+
+    if (error) {
+        errorEl.innerText = '登入失敗：' + error.message;
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    isAdminAuthed = true;
+    document.getElementById('admin-login-email').value = '';
+    document.getElementById('admin-login-password').value = '';
+    toggleModal('admin-login-modal');
+    finishSwitchToAdmin();
+    showToast('✅ 員工登入成功');
+}
+
+async function adminLogout() {
+    await supabaseClient.auth.signOut();
+    isAdminAuthed = false;
+    switchView('guest');
+    showToast('已登出員工後台');
+}
+
+// ============================================================
+// 前後台視圖切換
+// ============================================================
+
 // Toggle view between Guest (旅客) and Admin (員工)
-function switchView(view) {
-    currentView = view;
-    
+async function switchView(view) {
+    if (view === 'admin') {
+        // 若尚未通過員工登入驗證，先檢查現有 session，否則彈出登入視窗
+        if (!isAdminAuthed) {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                isAdminAuthed = true;
+            } else {
+                toggleModal('admin-login-modal');
+                return; // 尚未登入前不切換畫面
+            }
+        }
+        finishSwitchToAdmin();
+        return;
+    }
+
+    // 切回旅客前台
+    currentView = 'guest';
+
     const btnGuest = document.getElementById('btn-guest-view');
     const btnAdmin = document.getElementById('btn-admin-view');
     const banner = document.getElementById('role-banner');
@@ -40,36 +158,51 @@ function switchView(view) {
     const adminSummary = document.getElementById('admin-summary');
     const adminActions = document.getElementById('admin-actions');
     const guestInfo = document.getElementById('guest-infobar');
+    const logoutBtn = document.getElementById('btn-admin-logout');
 
-    if (view === 'guest') {
-        // Style Guest View Active
-        btnGuest.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-brand-600 shadow-sm flex items-center space-x-2";
-        btnAdmin.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2";
-        
-        // Content Switch
-        banner.className = "bg-gradient-to-br from-brand-500 to-sky-400 p-5 rounded-3xl text-white shadow-xl shadow-brand-100 relative overflow-hidden";
-        roleTitle.innerText = "旅客模式 🧳";
-        roleDesc.innerText = "您可以即時查看空房、挑選喜愛的房型、並在線上模擬完成預約訂房！";
-        adminSummary.classList.add('hidden');
-        adminActions.classList.add('hidden');
-        guestInfo.classList.remove('hidden');
-        
-        showToast("已切換至 旅客前台 模式");
-    } else {
-        // Style Admin View Active
-        btnAdmin.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-slate-800 shadow-sm flex items-center space-x-2";
-        btnGuest.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2";
-        
-        // Content Switch
-        banner.className = "bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-3xl text-white shadow-xl shadow-slate-100 relative overflow-hidden";
-        roleTitle.innerText = "員工後台 🛠️";
-        roleDesc.innerText = "客房調配儀表板。您可以隨時切換房間狀態（空房、整理中、保留已訂）或修改定價。";
-        adminSummary.classList.remove('hidden');
-        adminActions.classList.remove('hidden');
-        guestInfo.classList.add('hidden');
+    btnGuest.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-brand-600 shadow-sm flex items-center space-x-2";
+    btnAdmin.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2";
 
-        showToast("已進入 員工控房後台");
-    }
+    banner.className = "bg-gradient-to-br from-brand-500 to-sky-400 p-5 rounded-3xl text-white shadow-xl shadow-brand-100 relative overflow-hidden";
+    roleTitle.innerText = "旅客模式 🧳";
+    roleDesc.innerText = "您可以即時查看空房、挑選喜愛的房型、並在線上模擬完成預約訂房！";
+    adminSummary.classList.add('hidden');
+    adminActions.classList.add('hidden');
+    guestInfo.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+
+    showToast("已切換至 旅客前台 模式");
+
+    renderRooms();
+    updateSummaryCounters();
+}
+
+// 通過驗證後，實際切換到員工後台畫面
+function finishSwitchToAdmin() {
+    currentView = 'admin';
+
+    const btnGuest = document.getElementById('btn-guest-view');
+    const btnAdmin = document.getElementById('btn-admin-view');
+    const banner = document.getElementById('role-banner');
+    const roleTitle = document.getElementById('role-title');
+    const roleDesc = document.getElementById('role-desc');
+    const adminSummary = document.getElementById('admin-summary');
+    const adminActions = document.getElementById('admin-actions');
+    const guestInfo = document.getElementById('guest-infobar');
+    const logoutBtn = document.getElementById('btn-admin-logout');
+
+    btnAdmin.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 bg-white text-slate-800 shadow-sm flex items-center space-x-2";
+    btnGuest.className = "px-4 py-1.5 rounded-xl text-sm font-bold transition-all duration-300 text-slate-500 hover:text-slate-800 flex items-center space-x-2";
+
+    banner.className = "bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-3xl text-white shadow-xl shadow-slate-100 relative overflow-hidden";
+    roleTitle.innerText = "員工後台 🛠️";
+    roleDesc.innerText = "客房調配儀表板。您可以隨時切換房間狀態（空房、整理中、保留已訂）或修改定價。";
+    adminSummary.classList.remove('hidden');
+    adminActions.classList.remove('hidden');
+    guestInfo.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+
+    showToast("已進入 員工控房後台");
 
     renderRooms();
     updateSummaryCounters();
@@ -101,7 +234,7 @@ function renderRooms() {
     const grid = document.getElementById('room-grid');
     const emptyState = document.getElementById('empty-state');
     const searchQuery = document.getElementById('search-room').value.toLowerCase().trim();
-    
+
     // Filters values
     const checkin = document.getElementById('filter-checkin').value;
     const checkout = document.getElementById('filter-checkout').value;
@@ -110,7 +243,7 @@ function renderRooms() {
     const filtered = rooms.filter(room => {
         // Type filter
         if (currentTypeFilter !== 'All' && room.type !== currentTypeFilter) return false;
-        
+
         // Text search filter
         if (searchQuery) {
             const matchesSearch = room.id.includes(searchQuery) || room.name.toLowerCase().includes(searchQuery) || room.tags.some(tag => tag.toLowerCase().includes(searchQuery));
@@ -138,7 +271,7 @@ function renderRooms() {
         if (room.status === 'vacant') {
             statusColor = 'bg-emerald-500 text-white';
             statusLabel = '<i class="fa-solid fa-circle-check mr-1.5"></i> 空房中';
-            
+
             if (currentView === 'guest') {
                 actionButtonHTML = `
                     <button onclick="openBookingModal('${room.id}')" class="w-full bg-brand-50 hover:bg-brand-100 text-brand-600 font-extrabold text-xs py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5">
@@ -147,7 +280,6 @@ function renderRooms() {
                     </button>
                 `;
             } else {
-                // Admin: Toggle to other states
                 actionButtonHTML = `
                     <div class="grid grid-cols-2 gap-1.5">
                         <button onclick="changeRoomStatus('${room.id}', 'booked')" class="bg-orange-50 hover:bg-orange-100 text-orange-600 font-bold text-[10px] py-1.5 rounded-lg transition-all">設為已訂</button>
@@ -244,7 +376,7 @@ function renderRooms() {
                             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">每晚房價</span>
                             <span class="font-black text-slate-800 text-lg">NT$ ${room.price.toLocaleString()}<span class="text-xs font-bold text-slate-400"> / 晚</span></span>
                         </div>
-                        
+
                         <div class="w-full">
                             ${actionButtonHTML}
                         </div>
@@ -297,21 +429,29 @@ function openBookingModal(roomId) {
     toggleModal('booking-modal');
 }
 
-// Commit Guest Simulated Booking
-function confirmBooking() {
+// Commit Guest Simulated Booking（透過 Supabase RPC，無需登入即可預訂）
+async function confirmBooking() {
     if (!pendingBookingRoom) return;
 
     const checkin = document.getElementById('filter-checkin').value;
     const checkout = document.getElementById('filter-checkout').value;
+    const targetRoom = pendingBookingRoom;
 
-    // Update local memory state
-    const targetRoom = rooms.find(r => r.id === pendingBookingRoom.id);
-    targetRoom.status = 'booked';
-    targetRoom.occupant = '模擬旅客 (您)';
-    targetRoom.checkinDate = checkin;
-    targetRoom.checkoutDate = checkout;
+    const { error } = await supabaseClient.rpc('book_room', {
+        p_room_id: targetRoom.id,
+        p_checkin: checkin,
+        p_checkout: checkout,
+        p_guest_name: '模擬旅客 (您)'
+    });
 
-    // Add to simulated cart/booking log
+    if (error) {
+        showToast('⚠️ 預訂失敗：' + error.message);
+        toggleModal('booking-modal');
+        pendingBookingRoom = null;
+        return;
+    }
+
+    // Add to simulated cart/booking log（僅存於本次瀏覽的記憶體中）
     myBookedRooms.push({
         id: targetRoom.id,
         name: targetRoom.name,
@@ -320,39 +460,40 @@ function confirmBooking() {
         checkout
     });
 
-    // Close modal and refresh layouts
     toggleModal('booking-modal');
-    renderRooms();
-    updateSummaryCounters();
+    await loadRooms();
     updateCartUI();
-    
+
     showToast(`🎉 成功預訂 房號 ${targetRoom.id}！`);
     pendingBookingRoom = null;
 }
 
-// Admin: Direct change room status
-function changeRoomStatus(roomId, newStatus) {
-    const targetRoom = rooms.find(r => r.id === roomId);
-    if (!targetRoom) return;
-
-    targetRoom.status = newStatus;
+// Admin: Direct change room status（需已通過員工登入驗證，寫入受 RLS 保護）
+async function changeRoomStatus(roomId, newStatus) {
+    const patch = { status: newStatus };
     if (newStatus === 'vacant') {
-        targetRoom.occupant = '';
-        targetRoom.checkinDate = '';
-        targetRoom.checkoutDate = '';
+        patch.occupant = '';
+        patch.checkin_date = null;
+        patch.checkout_date = null;
     } else if (newStatus === 'booked') {
-        targetRoom.occupant = '現場安排旅客';
-        targetRoom.checkinDate = '2026-07-14';
-        targetRoom.checkoutDate = '2026-07-15';
+        patch.occupant = '現場安排旅客';
+        patch.checkin_date = '2026-07-14';
+        patch.checkout_date = '2026-07-15';
     }
 
-    renderRooms();
-    updateSummaryCounters();
+    const { error } = await supabaseClient.from('rooms').update(patch).eq('id', roomId);
+
+    if (error) {
+        showToast('⚠️ 更新房況失敗：' + error.message + '（請確認是否已登入員工帳號）');
+        return;
+    }
+
+    await loadRooms();
     showToast(`房號 ${roomId} 已變更為「${newStatus === 'vacant' ? '空房' : newStatus === 'booked' ? '已訂' : '維護'}」`);
 }
 
-// Admin: Add new Room dynamically
-function addNewRoom() {
+// Admin: Add new Room dynamically（寫入 Supabase，需已登入員工帳號）
+async function addNewRoom() {
     const id = document.getElementById('new-room-id').value.trim();
     const name = document.getElementById('new-room-name').value.trim() || `精緻套房 ${id}`;
     const type = document.getElementById('new-room-type').value;
@@ -372,17 +513,19 @@ function addNewRoom() {
     const price = priceVal ? parseInt(priceVal) : (type === 'Single' ? 1500 : type === 'Double' ? 2500 : 4000);
     const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()) : ['全新裝修', '備品齊全'];
 
-    rooms.push({
-        id,
-        name,
-        type,
-        price,
+    const { error } = await supabaseClient.from('rooms').insert({
+        id, name, type, price,
         status: 'vacant',
         tags,
         occupant: '',
-        checkinDate: '',
-        checkoutDate: ''
+        checkin_date: null,
+        checkout_date: null
     });
+
+    if (error) {
+        showToast('⚠️ 新增房間失敗：' + error.message + '（請確認是否已登入員工帳號）');
+        return;
+    }
 
     // Clear inputs
     document.getElementById('new-room-id').value = '';
@@ -391,8 +534,7 @@ function addNewRoom() {
     document.getElementById('new-room-tags').value = '';
 
     toggleModal('add-room-modal');
-    renderRooms();
-    updateSummaryCounters();
+    await loadRooms();
     showToast(`✨ 成功新增客房 ${id} - ${name}！`);
 }
 
@@ -448,23 +590,20 @@ function updateCartUI() {
     totalVal.innerText = `NT$ ${totalSum.toLocaleString()}`;
 }
 
-// Cancel simulated booking from myCart list
-function cancelMyBooking(idx) {
+// Cancel simulated booking from myCart list（透過 Supabase RPC 釋出房源）
+async function cancelMyBooking(idx) {
     const removed = myBookedRooms[idx];
-    
-    // Revert state in rooms list
-    const matched = rooms.find(r => r.id === removed.id);
-    if (matched) {
-        matched.status = 'vacant';
-        matched.occupant = '';
-        matched.checkinDate = '';
-        matched.checkoutDate = '';
+
+    const { error } = await supabaseClient.rpc('cancel_booking', { p_room_id: removed.id });
+
+    if (error) {
+        showToast('⚠️ 取消預訂失敗：' + error.message);
+        return;
     }
 
     myBookedRooms.splice(idx, 1);
-    
-    renderRooms();
-    updateSummaryCounters();
+
+    await loadRooms();
     updateCartUI();
     showToast(`已為您退訂 ${removed.id} 房`);
 }
@@ -473,9 +612,9 @@ function cancelMyBooking(idx) {
 function showToast(msg) {
     const toast = document.getElementById('toast-notif');
     const text = document.getElementById('toast-text');
-    
+
     text.innerText = msg;
-    
+
     toast.classList.remove('translate-y-24', 'opacity-0');
     toast.classList.add('translate-y-0', 'opacity-100');
 
