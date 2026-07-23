@@ -39,7 +39,7 @@ roomilly/
 
 ## 🔌 Supabase 串接設定
 
-本專案已改為**真實串接 Supabase**，房間資料、預訂狀態皆存於雲端資料庫，並支援跨分頁/跨使用者即時同步。
+本專案已**真實串接 Supabase**，房間資料、預訂狀態皆存於雲端資料庫，並支援跨分頁/跨使用者即時同步。
 
 ### 權限設計
 
@@ -84,14 +84,7 @@ auth: { persistSession: true }
 
 ## 🚀 使用方式
 
-直接用瀏覽器開啟 `index.html` 即可運行（記得先完成上方的 Supabase 設定，否則會讀不到房間資料）。
-
-```bash
-# 或使用簡易本地伺服器（可選）
-cd roomflow
-python3 -m http.server 8000
-# 瀏覽器開啟 http://localhost:8000
-```
+直接開啟 [https://billydayo.github.io/hoteltest/] 即可使用，無需下載或安裝任何東西。
 
 ## 🖱 操作說明
 
