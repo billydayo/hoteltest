@@ -1,0 +1,16 @@
+# OS 產生的雜訊檔案
+.DS_Store
+Thumbs.db
+
+# 編輯器設定
+.vscode/
+.idea/
+*.swp
+
+# 本機環境變數 / 密鑰（若之後有用到 service_role 等敏感金鑰的本機腳本，存這裡並排除進版控）
+.env
+.env.local
+
+# 若之後加入建置工具（目前專案不需要）
+node_modules/
+dist/
