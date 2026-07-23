@@ -295,7 +295,7 @@ function renderRooms() {
                 actionButtonHTML = `
                     <button disabled class="w-full bg-slate-100 text-slate-400 font-bold text-xs py-2.5 rounded-xl cursor-not-allowed flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-lock"></i>
-                        <span>已被客滿</span>
+                        <span>已有人住</span>
                     </button>
                 `;
             } else {
