@@ -1,4 +1,4 @@
-# RoomFlow - 智慧空房管理平台
+# Roomilly - 智慧空房管理平台
 
 一個純前端的旅宿客房狀態管理模擬系統，提供「旅客前台」與「員工後台」兩種模式，可即時查看、篩選、模擬預訂與管理客房狀態。
 
@@ -19,7 +19,7 @@
 ## 📁 檔案結構
 
 ```
-roomflow/
+roomilly/
 ├── index.html   # 頁面結構 (HTML)
 ├── style.css    # 自訂樣式 (CSS，Tailwind 以外的補充樣式)
 ├── script.js    # 應用邏輯 (JS：Supabase 存取、渲染、互動事件)
@@ -106,4 +106,4 @@ python3 -m http.server 8000
 - `anon` 角色可以呼叫 `book_room` / `cancel_booking`，任何知道房號的人理論上都能操作預訂，這與原本純前端展示版本的信任假設一致；如需更嚴謹的旅客身份綁定（例如「只能取消自己訂的房」），需要額外設計旅客帳號或訂單驗證碼機制。
 
 ---
-© 2026 RoomFlow 空房管理平台
+© 2026 Roomilly 空房管理平台

@@ -3,7 +3,7 @@
 // 請將以下兩個值換成你自己 Supabase 專案的 Project URL 與 anon public key
 // (Supabase Dashboard → Project Settings → API)
 // ============================================================
-const SUPABASE_URL = 'https://ifggswbwqeanhlhhcbli.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://ifggswbwqeanhlhhcbli.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlmZ2dzd2J3cWVhbmhsaGhjYmxpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NTU1MDQsImV4cCI6MjEwMDMzMTUwNH0.JYPzcC5t3is4PRdXU42E3iEeoXGiKKV8pRR3zCS4t_g';
 
 // persistSession 設為 false：不使用 localStorage 存放登入狀態，
