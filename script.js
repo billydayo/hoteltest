@@ -20,6 +20,62 @@ let pendingBookingRoom = null;
 let myBookedRooms = [];       // 本次瀏覽中，我(旅客)模擬預訂的房間清單（僅存於記憶體）
 let isAdminAuthed = false;    // 目前是否已通過員工登入驗證
 let realtimeChannel = null;
+const DEFAULT_ROOM_COUNT = 30;
+
+function generateDefaultRooms() {
+    const floorConfigs = [
+        { floor: 1, label: '豪華', split: [4, 4, 2] },
+        { floor: 2, label: '舒適', split: [3, 5, 2] },
+        { floor: 3, label: '尊榮', split: [2, 5, 3] }
+    ];
+
+    const roomTypeByIndex = (floorIndex, index) => {
+        const [singleCount, doubleCount, familyCount] = floorConfigs[floorIndex].split;
+        if (index < singleCount) return 'Single';
+        if (index < singleCount + doubleCount) return 'Double';
+        return 'Family';
+    };
+
+    return floorConfigs.flatMap((config, floorIndex) => {
+        return Array.from({ length: 10 }, (_, roomIndex) => {
+            const roomNumber = `${config.floor}${String(roomIndex + 1).padStart(2, '0')}`;
+            const type = roomTypeByIndex(floorIndex, roomIndex);
+            const roomNames = {
+                Single: `${config.label}單人雅緻房`,
+                Double: `${config.label}雙人精緻房`,
+                Family: `${config.label}家庭尊榮房`
+            };
+            const price = type === 'Single' ? 1500 : type === 'Double' ? 2500 : 4000;
+            const tags = type === 'Family' ? ['大空間', '家庭專屬'] : ['免費WiFi', '含早餐'];
+
+            return {
+                id: roomNumber,
+                name: `${roomNames[type]} ${roomNumber}`,
+                type,
+                price,
+                status: 'vacant',
+                tags,
+                occupant: '',
+                checkinDate: '',
+                checkoutDate: ''
+            };
+        });
+    });
+}
+
+function mergeRoomsWithDefaults(dbRooms) {
+    const defaultRooms = generateDefaultRooms();
+    const dbMap = new Map(dbRooms.map(r => [r.id, r]));
+
+    const merged = defaultRooms.map(def => dbMap.get(def.id) || def);
+    dbRooms.forEach(room => {
+        if (!merged.some(r => r.id === room.id)) {
+            merged.push(room);
+        }
+    });
+
+    return merged;
+}
 
 // Setup Dates default inputs to current date + initial data load
 window.onload = async function() {
@@ -50,7 +106,7 @@ async function loadRooms() {
         return;
     }
 
-    rooms = (data || []).map(r => ({
+    const dbRooms = (data || []).map(r => ({
         id: r.id,
         name: r.name,
         type: r.type,
@@ -61,6 +117,8 @@ async function loadRooms() {
         checkinDate: r.checkin_date || '',
         checkoutDate: r.checkout_date || ''
     }));
+
+    rooms = mergeRoomsWithDefaults(dbRooms);
 
     renderRooms();
     updateSummaryCounters();
@@ -441,7 +499,7 @@ async function confirmBooking() {
         p_room_id: targetRoom.id,
         p_checkin: checkin,
         p_checkout: checkout,
-        p_guest_name: '模擬旅客 (您)'
+        p_guest_name: '旅客 (您)'
     });
 
     if (error) {
