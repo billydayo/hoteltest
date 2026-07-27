@@ -77,6 +77,35 @@ function mergeRoomsWithDefaults(dbRooms) {
     return merged;
 }
 
+async function syncDefaultRoomsToSupabase() {
+    const defaultRooms = generateDefaultRooms();
+    const existingIds = new Set(rooms.map(r => r.id));
+    const missingRooms = defaultRooms.filter(r => !existingIds.has(r.id));
+
+    if (missingRooms.length === 0) return;
+
+    const insertPayload = missingRooms.map(room => ({
+        id: room.id,
+        name: room.name,
+        type: room.type,
+        price: room.price,
+        status: room.status,
+        tags: room.tags,
+        occupant: room.occupant,
+        checkin_date: null,
+        checkout_date: null
+    }));
+
+    const { error } = await supabaseClient.from('rooms').insert(insertPayload);
+    if (error) {
+        showToast('⚠️ 自動同步房間至 Supabase 失敗：' + error.message);
+        return;
+    }
+
+    showToast(`✨ 已自動補齊 ${missingRooms.length} 間預設房間到 Supabase。`);
+    await loadRooms();
+}
+
 // Setup Dates default inputs to current date + initial data load
 window.onload = async function() {
     const today = new Date();
@@ -173,7 +202,7 @@ async function handleAdminLogin() {
     document.getElementById('admin-login-email').value = '';
     document.getElementById('admin-login-password').value = '';
     toggleModal('admin-login-modal');
-    finishSwitchToAdmin();
+    await finishSwitchToAdmin();
     showToast('✅ 員工登入成功');
 }
 
@@ -201,7 +230,7 @@ async function switchView(view) {
                 return; // 尚未登入前不切換畫面
             }
         }
-        finishSwitchToAdmin();
+        await finishSwitchToAdmin();
         return;
     }
 
@@ -236,7 +265,7 @@ async function switchView(view) {
 }
 
 // 通過驗證後，實際切換到員工後台畫面
-function finishSwitchToAdmin() {
+async function finishSwitchToAdmin() {
     currentView = 'admin';
 
     const btnGuest = document.getElementById('btn-guest-view');
@@ -262,6 +291,7 @@ function finishSwitchToAdmin() {
 
     showToast("已進入 員工控房後台");
 
+    await syncDefaultRoomsToSupabase();
     renderRooms();
     updateSummaryCounters();
 }
