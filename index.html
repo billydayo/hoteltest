@@ -223,6 +223,10 @@
 
                 <!-- Admin Action Buttons (Visible only in Admin Mode) -->
                 <div id="admin-actions" class="hidden w-full sm:w-auto flex items-center justify-end gap-3">
+                    <button id="btn-sync-rooms" onclick="manualSyncRooms()" title="把尚未上傳的預設房間補到 Supabase" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>同步房間</span>
+                    </button>
                     <button onclick="toggleModal('add-room-modal')" class="bg-brand-500 hover:bg-brand-600 text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-md shadow-brand-100 transition-all">
                         <i class="fa-solid fa-plus"></i>
                         <span>新增房客客房</span>

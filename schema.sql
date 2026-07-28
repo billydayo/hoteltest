@@ -246,16 +246,56 @@ grant execute on function public.cancel_booking(text) to authenticated;
 
 
 -- ------------------------------------------------------------
--- 7. 種子資料（房號重複時不覆蓋既有資料）
+-- 7. 種子資料：3 層樓 × 10 間 = 30 間預設客房
+--
+--    內容與 script.js 的 generateDefaultRooms() 完全對應：
+--      1 樓「豪華」單4 / 雙4 / 家庭2
+--      2 樓「舒適」單3 / 雙5 / 家庭2
+--      3 樓「尊榮」單2 / 雙5 / 家庭3
+--      房價：單人 1500 / 雙人 2500 / 家庭 4000
+--
+--    ★ on conflict do nothing：房號已存在就整筆跳過，
+--      因此你自己設計的房型（房名、房價、標籤）與現有訂房狀態都不會被蓋掉，
+--      只會補上資料庫裡缺少的房號。可以安心重複執行。
 -- ------------------------------------------------------------
 insert into public.rooms (id, name, type, price, status, tags) values
+    -- 1F 豪華
     ('101', '豪華單人雅緻房 101', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
     ('102', '豪華單人雅緻房 102', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
+    ('103', '豪華單人雅緻房 103', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
+    ('104', '豪華單人雅緻房 104', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
     ('105', '豪華雙人精緻房 105', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
     ('106', '豪華雙人精緻房 106', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('107', '豪華雙人精緻房 107', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('108', '豪華雙人精緻房 108', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
     ('109', '豪華家庭尊榮房 109', 'Family', 4000, 'vacant', array['大空間', '家庭專屬']),
-    ('110', '豪華家庭尊榮房 110', 'Family', 4000, 'vacant', array['大空間', '家庭專屬'])
+    ('110', '豪華家庭尊榮房 110', 'Family', 4000, 'vacant', array['大空間', '家庭專屬']),
+    -- 2F 舒適
+    ('201', '舒適單人雅緻房 201', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
+    ('202', '舒適單人雅緻房 202', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
+    ('203', '舒適單人雅緻房 203', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
+    ('204', '舒適雙人精緻房 204', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('205', '舒適雙人精緻房 205', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('206', '舒適雙人精緻房 206', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('207', '舒適雙人精緻房 207', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('208', '舒適雙人精緻房 208', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('209', '舒適家庭尊榮房 209', 'Family', 4000, 'vacant', array['大空間', '家庭專屬']),
+    ('210', '舒適家庭尊榮房 210', 'Family', 4000, 'vacant', array['大空間', '家庭專屬']),
+    -- 3F 尊榮
+    ('301', '尊榮單人雅緻房 301', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
+    ('302', '尊榮單人雅緻房 302', 'Single', 1500, 'vacant', array['免費WiFi', '含早餐']),
+    ('303', '尊榮雙人精緻房 303', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('304', '尊榮雙人精緻房 304', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('305', '尊榮雙人精緻房 305', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('306', '尊榮雙人精緻房 306', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('307', '尊榮雙人精緻房 307', 'Double', 2500, 'vacant', array['免費WiFi', '含早餐']),
+    ('308', '尊榮家庭尊榮房 308', 'Family', 4000, 'vacant', array['大空間', '家庭專屬']),
+    ('309', '尊榮家庭尊榮房 309', 'Family', 4000, 'vacant', array['大空間', '家庭專屬']),
+    ('310', '尊榮家庭尊榮房 310', 'Family', 4000, 'vacant', array['大空間', '家庭專屬'])
 on conflict (id) do nothing;
+
+-- 檢查結果：應為 30 間
+-- select count(*) as 房間總數 from public.rooms;
 
 
 -- ------------------------------------------------------------

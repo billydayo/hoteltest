@@ -19,7 +19,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 });
 
 // App state variables
-let rooms = [];               // 從 Supabase 讀取的房間資料
+let rooms = [];               // 畫面用的房間資料（資料庫資料 + 尚未上傳的預設房）
+let dbRoomIds = new Set();    // 資料庫中「實際存在」的房號，用來判斷還缺哪幾間
 let currentView = 'guest';    // 'guest' or 'admin'
 let currentTypeFilter = 'All';
 let pendingBookingRoom = null;
@@ -86,10 +87,14 @@ function mergeRoomsWithDefaults(dbRooms) {
     return merged;
 }
 
+// 把「資料庫裡還沒有」的預設房間補上去（僅員工可執行，寫入受 RLS 保護）
+//
+// 注意：這裡必須比對 dbRoomIds（資料庫實際存在的房號），不能比對 rooms。
+// rooms 是 mergeRoomsWithDefaults() 的結果，永遠包含全部 30 間預設房，
+// 拿它來比對會永遠算出「零間缺少」而什麼都不做。
 async function syncDefaultRoomsToSupabase() {
     const defaultRooms = generateDefaultRooms();
-    const existingIds = new Set(rooms.map(r => r.id));
-    const missingRooms = defaultRooms.filter(r => !existingIds.has(r.id));
+    const missingRooms = defaultRooms.filter(r => !dbRoomIds.has(r.id));
 
     if (missingRooms.length === 0) return;
 
@@ -105,7 +110,11 @@ async function syncDefaultRoomsToSupabase() {
         checkout_date: null
     }));
 
-    const { error } = await supabaseClient.from('rooms').insert(insertPayload);
+    // upsert + ignoreDuplicates：若同時有其他人也在補齊，重複的房號會被忽略而非報錯
+    const { error } = await supabaseClient
+        .from('rooms')
+        .upsert(insertPayload, { onConflict: 'id', ignoreDuplicates: true });
+
     if (error) {
         showToast('⚠️ 自動同步房間至 Supabase 失敗：' + error.message);
         return;
@@ -113,6 +122,30 @@ async function syncDefaultRoomsToSupabase() {
 
     showToast(`✨ 已自動補齊 ${missingRooms.length} 間預設房間到 Supabase。`);
     await loadRooms();
+}
+
+// 後台「同步房間」按鈕：手動觸發，並在已經同步完成時也給明確回饋
+async function manualSyncRooms() {
+    if (!isAdminAuthed) {
+        showToast('⚠️ 請先以員工帳號登入');
+        return;
+    }
+
+    const btn = document.getElementById('btn-sync-rooms');
+    const missingCount = generateDefaultRooms().filter(r => !dbRoomIds.has(r.id)).length;
+
+    if (missingCount === 0) {
+        showToast(`✅ 全部 ${dbRoomIds.size} 間房間都已在 Supabase 上，無需同步。`);
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>同步中...</span>';
+
+    await syncDefaultRoomsToSupabase();
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i><span>同步房間</span>';
 }
 
 // Setup Dates default inputs to current date + initial data load
@@ -206,6 +239,7 @@ async function loadRooms() {
         bookedBy: r.booked_by || null
     }));
 
+    dbRoomIds = new Set(dbRooms.map(r => r.id));
     rooms = mergeRoomsWithDefaults(dbRooms);
 
     syncMyBookings();
