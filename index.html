@@ -458,6 +458,34 @@
         </div>
     </div>
 
+    <!-- Room Image Lightbox (點擊卡片照片放大) -->
+    <div id="image-lightbox" onclick="closeImageLightbox()" class="fixed inset-0 bg-slate-950/92 z-[60] backdrop-blur-md flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4 sm:p-8 cursor-zoom-out">
+        <div onclick="event.stopPropagation()" class="relative max-w-5xl w-full transform scale-95 transition-transform duration-300 cursor-default">
+            <!-- 關閉鈕 -->
+            <button onclick="closeImageLightbox()" title="關閉 (Esc)" class="absolute -top-3 -right-1 sm:-top-4 sm:-right-4 z-10 w-10 h-10 rounded-full bg-white text-slate-700 hover:bg-slate-100 shadow-xl flex items-center justify-center transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- 大圖 -->
+            <div class="relative bg-slate-900 rounded-3xl overflow-hidden shadow-2xl min-h-[220px] flex items-center justify-center">
+                <div id="lightbox-loading" class="hidden absolute inset-0 flex items-center justify-center text-white/70">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+                </div>
+                <img id="lightbox-img" src="" alt="" class="w-full max-h-[72vh] object-contain transition-opacity duration-300">
+            </div>
+
+            <!-- 圖說 -->
+            <div class="mt-4 flex items-center justify-between gap-4 text-white">
+                <div class="min-w-0">
+                    <div id="lightbox-room" class="text-[10px] font-black uppercase tracking-widest text-brand-300">房號 101</div>
+                    <div id="lightbox-name" class="font-bold text-sm sm:text-base truncate">客房名稱</div>
+                </div>
+                <div id="lightbox-price" class="font-black text-sm sm:text-lg shrink-0">NT$ 0 / 晚</div>
+            </div>
+            <p class="mt-2 text-[10px] text-white/40 font-semibold text-center">點擊圖片外的區域或按 Esc 可關閉</p>
+        </div>
+    </div>
+
     <!-- Notification Toast -->
     <div id="toast-notif" class="fixed bottom-5 right-5 bg-slate-800 text-white text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-2.5 translate-y-24 opacity-0 transition-all duration-300 z-50">
         <i class="fa-solid fa-circle-info text-brand-400 text-sm"></i>

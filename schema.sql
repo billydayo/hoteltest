@@ -299,9 +299,94 @@ on conflict (id) do nothing;
 
 
 -- ------------------------------------------------------------
--- 8. 把某個帳號設為員工（先在 Authentication → Users 建立帳號，再執行）
---    把信箱換成實際的員工信箱後，取消註解執行：
+-- 8. 把已存在的帳號加入員工名單
+--    （若已在 Dashboard → Authentication → Users 建好帳號，執行這段就好）
 -- ------------------------------------------------------------
--- insert into public.staff (user_id, email)
--- select id, email from auth.users where email = 'staff@example.com'
--- on conflict (user_id) do nothing;
+insert into public.staff (user_id, email)
+select id, email from auth.users where email = 'admin@gmail.com'
+on conflict (user_id) do nothing;
+
+-- 確認結果：應該看到 admin@gmail.com 一列
+-- select s.email, s.user_id, u.email_confirmed_at
+--   from public.staff s join auth.users u on u.id = s.user_id;
+
+
+-- ============================================================
+-- 9.（選用）直接用 SQL 建立員工帳號 admin@gmail.com
+--
+--    適合不想手動點 Dashboard、或不希望系統寄驗證信的情況
+--    （直接把 email_confirmed_at 設成 now()，等於信箱已驗證，
+--     完全繞過「每小時只能寄 2 封信」的額度限制）。
+--
+--    ★ 執行前請把 3 處的密碼 'Roomilly@2026' 改成你要的密碼。
+--    ★ 刻意寫成三條獨立的 INSERT（不用 do $$ ... declare），
+--      因為 SQL Editor 只會執行「選取的範圍」，少複製到第一行
+--      就會出現 `syntax error at or near "text"`。
+--      這種寫法每一條都能單獨執行，也可以重複執行。
+-- ============================================================
+
+-- 9-1. 建立 Auth 使用者（帳號已存在時不做任何事）
+insert into auth.users (
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, created_at, updated_at,
+    raw_app_meta_data, raw_user_meta_data,
+    confirmation_token, recovery_token, email_change_token_new, email_change
+)
+select
+    '00000000-0000-0000-0000-000000000000',
+    gen_random_uuid(),
+    'authenticated',
+    'authenticated',
+    'admin@gmail.com',
+    extensions.crypt('Roomilly@2026', extensions.gen_salt('bf')),
+    now(), now(), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"display_name":"櫃檯人員"}'::jsonb,
+    '', '', '', ''
+where not exists (
+    select 1 from auth.users where email = 'admin@gmail.com'
+);
+
+-- 9-2. 建立對應的 identity
+--      GoTrue 靠 identities 判斷「這個帳號可以用哪種方式登入」，
+--      少了這筆，密碼登入會失敗。
+insert into auth.identities (
+    id, user_id, identity_data, provider, provider_id,
+    last_sign_in_at, created_at, updated_at
+)
+select
+    gen_random_uuid(),
+    u.id,
+    jsonb_build_object('sub', u.id::text, 'email', u.email),
+    'email',
+    u.id::text,
+    now(), now(), now()
+from auth.users u
+where u.email = 'admin@gmail.com'
+  and not exists (
+      select 1 from auth.identities i
+       where i.user_id = u.id and i.provider = 'email'
+  );
+
+-- 9-3. 加入員工名單（這步不能省，否則登入後仍無後台權限）
+insert into public.staff (user_id, email)
+select id, email from auth.users where email = 'admin@gmail.com'
+on conflict (user_id) do nothing;
+
+
+-- 9-4. 確認結果：應該看到一列，且 is_staff 為 true、email_confirmed_at 有時間
+select u.email,
+       u.email_confirmed_at is not null as 信箱已驗證,
+       s.user_id is not null            as 是員工,
+       i.provider                       as 登入方式
+  from auth.users u
+  left join public.staff s      on s.user_id = u.id
+  left join auth.identities i   on i.user_id = u.id and i.provider = 'email'
+ where u.email = 'admin@gmail.com';
+
+
+-- 9-5. 之後想改密碼時單獨執行這條即可
+-- update auth.users
+--    set encrypted_password = extensions.crypt('新密碼', extensions.gen_salt('bf')),
+--        updated_at         = now()
+--  where email = 'admin@gmail.com';

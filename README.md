@@ -15,6 +15,8 @@
   - 關鍵字搜尋房號、房名、設備標籤
   - 線上預訂空房，並於側邊欄查看「我的預訂」清單與總價
   - 可隨時取消自己的預訂
+  - **每間房都有專屬照片**（依房號對應，30 間房各不相同且固定不變）
+  - **點擊卡片照片可放大檢視**，燈箱內顯示房號、房名與房價；點背景或按 Esc 關閉
 - **員工後台**
   - 儀表板即時統計空房 / 已訂 / 整理中房數
   - 直接切換房間狀態（空房 ↔ 已訂 ↔ 維護整理）
@@ -71,7 +73,15 @@ roomilly/
 
 2. **開放旅客自助註冊**
    到 Supabase Dashboard → **Authentication → Providers → Email**，確認 Email 供應商為啟用狀態。
-   若希望註冊後可以直接登入訂房（不必收驗證信），把 **Confirm email** 關閉；保持開啟也可以，前端會提示使用者「請至信箱點擊驗證連結後再登入」。
+   建議把 **Confirm email 關閉**：註冊後直接取得 JWT session 就能訂房，不必收驗證信。保持開啟也可以，前端會提示使用者「請至信箱點擊驗證連結後再登入」。
+
+   > ⚠️ **踩過的坑：`嘗試次數過多，請稍後再試`**
+   >
+   > 若 Confirm email 開啟，每次註冊都會寄一封驗證信，而 Supabase **內建**郵件服務的上限是 **2 封 / 小時**，測試第 3 個帳號就會被擋，錯誤訊息是 `email rate limit exceeded`。
+   >
+   > 這個數字在 Authentication → Rate Limits 是**鎖住無法調高**的，必須先到 Authentication → Emails → SMTP Settings 接上自訂 SMTP（Resend、SendGrid 等）才會解鎖。
+   >
+   > 開發階段最省事的做法就是**關掉 Confirm email** —— 不寄信就沒有額度問題。要建員工帳號也可以走 `schema.sql` 第 9 段直接用 SQL 建，完全繞過郵件系統。
 
 3. **建立員工帳號並加入 staff 名單**
    先到 **Authentication → Users → Add user** 建立員工的信箱＋密碼，接著到 **SQL Editor** 執行（信箱換成實際的員工信箱）：

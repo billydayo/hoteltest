@@ -31,6 +31,54 @@ let guestAuthMode = 'login';  // 會員視窗模式：'login' or 'signup'
 let realtimeChannel = null;
 const DEFAULT_ROOM_COUNT = 30;
 
+// ============================================================
+// 房間照片：每間房一張不同的圖
+// 34 張 Unsplash 旅宿照片，皆已確認網址有效
+// ============================================================
+const ROOM_IMAGE_POOL = [
+    '1590490360182-c33d57733427', '1598928506311-c55ded91a20c', '1566665797739-1674de7a421a',
+    '1631049307264-da0ec9d70304', '1611892440504-42a792e24d32', '1582719478250-c89cae4dc85b',
+    '1578683010236-d716f9a3f461', '1560448204-e02f11c3d0e2', '1522771739844-6a9f6d5f14af',
+    '1571003123894-1f0594d2b5d9', '1618773928121-c32242e63f39', '1552902865-b72c031ac5ea',
+    '1587985064135-0366536eab42', '1584132967334-10e028bd69f7', '1595576508898-0ad5c879a061',
+    '1600210492486-724fe5c67fb0', '1616486338812-3dadae4b4ace', '1505693416388-ac5ce068fe85',
+    '1540518614846-7eded433c457', '1567767292278-a4f21aa2d36e', '1512918728675-ed5a9ecdebfd',
+    '1613490493576-7fde63acd811', '1493809842364-78817add7ffb', '1445019980597-93fa8acb246c',
+    '1551882547-ff40c63fe5fa', '1560185007-cde436f6a4d0', '1600607687939-ce8a6c25118c',
+    '1600566753086-00f18fb6b3ea', '1618221195710-dd6b41faaea6', '1502672260266-1c1ef2d93688',
+    '1596394516093-501ba68a0ba6', '1615874959474-d609969a20ed', '1586105251261-72a756497a11',
+    '1626178793926-22b28830aa30'
+];
+
+// 由房號推出固定的圖片索引。
+// 標準房號（101~310）依「樓層 × 房序」對應 0~29，30 間房剛好各拿到不同的一張；
+// 員工自訂的房號則用字串雜湊，同一房號每次都會得到同一張圖（不會每次重繪就換圖）。
+function roomImageIndex(roomId) {
+    const match = /^(\d)(\d{2})$/.exec(String(roomId));
+    if (match) {
+        const floor = parseInt(match[1], 10);
+        const seq = parseInt(match[2], 10);
+        if (floor >= 1 && seq >= 1 && seq <= 10) {
+            return ((floor - 1) * 10 + (seq - 1)) % ROOM_IMAGE_POOL.length;
+        }
+    }
+
+    let hash = 0;
+    for (const ch of String(roomId)) {
+        hash = (hash * 31 + ch.charCodeAt(0)) % 1000000;
+    }
+    return hash % ROOM_IMAGE_POOL.length;
+}
+
+// size: 'card' 卡片縮圖 / 'full' 燈箱大圖
+function getRoomImage(roomId, size = 'card') {
+    const photoId = ROOM_IMAGE_POOL[roomImageIndex(roomId)];
+    const params = size === 'full'
+        ? 'auto=format&fit=crop&w=1400&q=85'
+        : 'auto=format&fit=crop&w=500&h=320&q=80';
+    return `https://images.unsplash.com/photo-${photoId}?${params}`;
+}
+
 function generateDefaultRooms() {
     const floorConfigs = [
         { floor: 1, label: '豪華', split: [4, 4, 2] },
@@ -471,7 +519,11 @@ function translateAuthError(message = '') {
     if (msg.includes('user already registered')) return '此信箱已註冊過，請直接登入';
     if (msg.includes('password should be at least')) return '密碼長度不足，請至少輸入 6 個字元';
     if (msg.includes('unable to validate email address')) return '信箱格式不正確';
-    if (msg.includes('email rate limit') || msg.includes('too many requests')) return '嘗試次數過多，請稍後再試';
+    // 寄信額度與請求頻率是兩種不同的限制，訊息要分開講才找得到問題
+    if (msg.includes('email rate limit') || msg.includes('email_send_rate_limit')) {
+        return '系統寄送驗證信已達額度上限（內建郵件服務每小時 2 封）。請稍後再試，或請管理者關閉信箱驗證 / 改接自訂 SMTP。';
+    }
+    if (msg.includes('too many requests') || msg.includes('rate limit')) return '操作過於頻繁，請稍後再試';
     return message;
 }
 
@@ -775,16 +827,20 @@ function renderRooms() {
         // Tag elements
         const tagsHTML = room.tags.map(tag => `<span class="bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-400">${tag}</span>`).join('');
 
-        // Custom Unsplash-like placeholder images depending on room type to ensure aesthetic excellence
-        let roomImage = `https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=400&q=80`; // Default Double
-        if (room.type === 'Single') roomImage = `https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=400&q=80`;
-        if (room.type === 'Family') roomImage = `https://images.unsplash.com/photo-1566665797739-1674de7a421a?auto=format&fit=crop&w=400&q=80`;
+        // 每間房依房號取得專屬照片（同一房號固定同一張）
+        const roomImage = getRoomImage(room.id, 'card');
 
         return `
             <div class="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col group">
-                <!-- Card Image Header -->
-                <div class="relative h-44 overflow-hidden shrink-0">
-                    <img src="${roomImage}" alt="${room.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.onerror=null; this.src='https://placehold.co/400x200/e2e8f0/64748b?text=Room+Image'">
+                <!-- Card Image Header (點擊可放大) -->
+                <div class="relative h-44 overflow-hidden shrink-0 cursor-zoom-in" onclick="openImageLightbox('${room.id}')" title="點擊放大檢視">
+                    <img src="${roomImage}" alt="房號 ${room.id}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.onerror=null; this.src='https://placehold.co/500x320/e2e8f0/64748b?text=Room+Image'">
+                    <!-- 放大提示（滑過時淡入） -->
+                    <div class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/25 transition-all duration-300 flex items-center justify-center">
+                        <div class="w-11 h-11 rounded-full bg-white/90 text-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300 shadow-lg">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i>
+                        </div>
+                    </div>
                     <!-- Status Overlay Badge -->
                     <div class="absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-black shadow-md ${statusColor}">
                         ${statusLabel}
@@ -854,6 +910,49 @@ function closeModal(modalId) {
     modal.classList.add('opacity-0', 'pointer-events-none');
     modal.children[0].classList.remove('scale-100');
     modal.children[0].classList.add('scale-95');
+}
+
+// ============================================================
+// 圖片燈箱：點擊房間照片放大檢視
+// ============================================================
+function openImageLightbox(roomId) {
+    const room = rooms.find(r => r.id === roomId);
+    if (!room) return;
+
+    const box = document.getElementById('image-lightbox');
+    const img = document.getElementById('lightbox-img');
+    const spinner = document.getElementById('lightbox-loading');
+
+    // 大圖需要重新下載，載入完成前先顯示轉圈
+    spinner.classList.remove('hidden');
+    img.classList.add('opacity-0');
+    img.onload = () => {
+        spinner.classList.add('hidden');
+        img.classList.remove('opacity-0');
+    };
+    img.onerror = () => {
+        spinner.classList.add('hidden');
+        img.classList.remove('opacity-0');
+        img.src = 'https://placehold.co/1200x800/e2e8f0/64748b?text=Room+Image';
+    };
+
+    img.src = getRoomImage(room.id, 'full');
+    img.alt = `房號 ${room.id}`;
+
+    document.getElementById('lightbox-room').innerText = `房號 ${room.id}`;
+    document.getElementById('lightbox-name').innerText = room.name;
+    document.getElementById('lightbox-price').innerText = `NT$ ${room.price.toLocaleString()} / 晚`;
+
+    box.classList.remove('opacity-0', 'pointer-events-none');
+    box.children[0].classList.remove('scale-95');
+    document.body.classList.add('overflow-hidden');
+}
+
+function closeImageLightbox() {
+    const box = document.getElementById('image-lightbox');
+    box.classList.add('opacity-0', 'pointer-events-none');
+    box.children[0].classList.add('scale-95');
+    document.body.classList.remove('overflow-hidden');
 }
 
 // Trigger Guest Booking Modal with populated details
@@ -1113,6 +1212,11 @@ document.addEventListener('keydown', (e) => {
             handleAdminLogin();
         }
     } else if (e.key === 'Escape') {
+        const lightbox = document.getElementById('image-lightbox');
+        if (isOpen(lightbox)) {
+            closeImageLightbox();
+            return;   // 燈箱疊在最上層，優先關它
+        }
         if (isOpen(guestModal)) closeModal('guest-auth-modal');
         if (isOpen(adminModal)) closeModal('admin-login-modal');
     }
