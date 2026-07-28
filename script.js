@@ -33,21 +33,24 @@ const DEFAULT_ROOM_COUNT = 30;
 
 // ============================================================
 // 房間照片：每間房一張不同的圖
-// 34 張 Unsplash 旅宿照片，皆已確認網址有效
+//
+// 30 張 Unsplash 旅宿照片，全部已確認：
+//   1) 網址有效（HTTP 200）
+//   2) 為橫式構圖（寬高比 > 1.3）—— 直式照片在卡片會被裁掉大半，
+//      在燈箱也會出現左右黑邊，因此不納入
+// 剛好對應旅館的 30 間房，房號與照片是一對一，不會重複。
 // ============================================================
 const ROOM_IMAGE_POOL = [
     '1590490360182-c33d57733427', '1598928506311-c55ded91a20c', '1566665797739-1674de7a421a',
     '1631049307264-da0ec9d70304', '1611892440504-42a792e24d32', '1582719478250-c89cae4dc85b',
     '1578683010236-d716f9a3f461', '1560448204-e02f11c3d0e2', '1522771739844-6a9f6d5f14af',
-    '1571003123894-1f0594d2b5d9', '1618773928121-c32242e63f39', '1552902865-b72c031ac5ea',
-    '1587985064135-0366536eab42', '1584132967334-10e028bd69f7', '1595576508898-0ad5c879a061',
-    '1600210492486-724fe5c67fb0', '1616486338812-3dadae4b4ace', '1505693416388-ac5ce068fe85',
-    '1540518614846-7eded433c457', '1567767292278-a4f21aa2d36e', '1512918728675-ed5a9ecdebfd',
-    '1613490493576-7fde63acd811', '1493809842364-78817add7ffb', '1445019980597-93fa8acb246c',
-    '1551882547-ff40c63fe5fa', '1560185007-cde436f6a4d0', '1600607687939-ce8a6c25118c',
-    '1600566753086-00f18fb6b3ea', '1618221195710-dd6b41faaea6', '1502672260266-1c1ef2d93688',
-    '1596394516093-501ba68a0ba6', '1615874959474-d609969a20ed', '1586105251261-72a756497a11',
-    '1626178793926-22b28830aa30'
+    '1618773928121-c32242e63f39', '1587985064135-0366536eab42', '1584132967334-10e028bd69f7',
+    '1595576508898-0ad5c879a061', '1600210492486-724fe5c67fb0', '1616486338812-3dadae4b4ace',
+    '1505693416388-ac5ce068fe85', '1540518614846-7eded433c457', '1567767292278-a4f21aa2d36e',
+    '1512918728675-ed5a9ecdebfd', '1613490493576-7fde63acd811', '1493809842364-78817add7ffb',
+    '1445019980597-93fa8acb246c', '1551882547-ff40c63fe5fa', '1560185007-cde436f6a4d0',
+    '1600607687939-ce8a6c25118c', '1600566753086-00f18fb6b3ea', '1618221195710-dd6b41faaea6',
+    '1502672260266-1c1ef2d93688', '1596394516093-501ba68a0ba6', '1626178793926-22b28830aa30'
 ];
 
 // 由房號推出固定的圖片索引。
@@ -835,6 +838,8 @@ function renderRooms() {
                 <!-- Card Image Header (點擊可放大) -->
                 <div class="relative h-44 overflow-hidden shrink-0 cursor-zoom-in" onclick="openImageLightbox('${room.id}')" title="點擊放大檢視">
                     <img src="${roomImage}" alt="房號 ${room.id}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.onerror=null; this.src='https://placehold.co/500x320/e2e8f0/64748b?text=Room+Image'">
+                    <!-- 底部漸層：確保左下角房號在亮色照片上也讀得清楚 -->
+                    <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-900/65 to-transparent"></div>
                     <!-- 放大提示（滑過時淡入） -->
                     <div class="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/25 transition-all duration-300 flex items-center justify-center">
                         <div class="w-11 h-11 rounded-full bg-white/90 text-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all duration-300 shadow-lg">
