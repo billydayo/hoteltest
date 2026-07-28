@@ -67,7 +67,30 @@
                     <i class="fa-solid fa-screwdriver-wrench"></i>
                     <span>員工後台</span>
                 </button>
-            </div>       
+            </div>
+
+            <!-- Auth Area (旅客會員登入狀態) -->
+            <div class="flex items-center gap-2">
+                <!-- 未登入 -->
+                <button id="btn-guest-login" onclick="openGuestAuthModal('login')" class="bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md shadow-brand-100 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span class="hidden sm:inline">會員登入</span>
+                </button>
+
+                <!-- 已登入 -->
+                <div id="guest-user-chip" class="hidden items-center gap-2 bg-slate-50 border border-slate-100 rounded-2xl pl-3 pr-1.5 py-1.5">
+                    <div class="w-7 h-7 rounded-xl bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-black shrink-0">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="hidden sm:block leading-tight max-w-[160px]">
+                        <div id="guest-user-email" class="text-[11px] font-extrabold text-slate-700 truncate">guest@example.com</div>
+                        <div id="guest-user-role" class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Member</div>
+                    </div>
+                    <button onclick="guestLogout()" title="登出" class="w-7 h-7 rounded-xl bg-white hover:bg-rose-50 text-slate-400 hover:text-rose-500 border border-slate-100 flex items-center justify-center transition-all">
+                        <i class="fa-solid fa-right-from-bracket text-[11px]"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -88,7 +111,7 @@
                     <span id="role-title">旅客模式 🧳</span>
                 </h3>
                 <p id="role-desc" class="text-xs text-white/90 leading-relaxed">
-                    您可以即時查看空房、挑選喜愛的房型、並在線上模擬完成預約訂房！
+                    您可以自由瀏覽與篩選空房；登入會員後即可線上預訂客房。
                 </p>
                 <div id="admin-summary" class="hidden mt-3 pt-3 border-t border-white/20 grid grid-cols-3 gap-2 text-center text-xs">
                     <div>
@@ -209,7 +232,7 @@
                 <!-- Info labels inside guest view -->
                 <div id="guest-infobar" class="text-xs text-slate-400 font-bold flex items-center gap-2">
                     <i class="fa-solid fa-circle-info text-brand-500"></i>
-                    <span>點擊卡片上的「立即預訂」即可更換房間狀態！</span>
+                    <span>登入會員後，點擊卡片上的「立即預訂」即可下訂！</span>
                 </div>
             </div>
 
@@ -350,6 +373,83 @@
                         登入
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guest Member Auth Modal (JWT 登入 / 註冊) -->
+    <div id="guest-auth-modal" class="fixed inset-0 bg-slate-900/60 z-50 backdrop-blur-sm flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300 p-4">
+        <div class="bg-white rounded-[32px] shadow-2xl max-w-sm w-full overflow-hidden transform scale-95 transition-all duration-300">
+            <!-- Header -->
+            <div class="bg-gradient-to-br from-brand-500 to-sky-400 p-6 text-white relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-8 opacity-15 text-8xl">
+                    <i class="fa-solid fa-suitcase-rolling"></i>
+                </div>
+                <button onclick="closeModal('guest-auth-modal')" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all z-10">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white mb-3">
+                    <i class="fa-solid fa-user-astronaut"></i>
+                </div>
+                <h3 id="guest-auth-title" class="font-extrabold text-base">旅客會員登入</h3>
+                <p id="guest-auth-subtitle" class="text-xs text-white/85">登入後即可線上預訂客房並查看您的訂房紀錄</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="px-6 pt-5">
+                <div class="bg-slate-100 p-1 rounded-2xl flex items-center gap-1">
+                    <button id="guest-tab-login" onclick="switchGuestAuthTab('login')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all bg-white text-brand-600 shadow-sm">
+                        登入
+                    </button>
+                    <button id="guest-tab-signup" onclick="switchGuestAuthTab('signup')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all text-slate-500 hover:text-slate-800">
+                        註冊新帳號
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form -->
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">電子信箱</label>
+                    <div class="relative">
+                        <i class="fa-regular fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="email" id="guest-auth-email" autocomplete="email" placeholder="you@example.com" class="w-full pl-8 pr-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">密碼</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-key absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="password" id="guest-auth-password" autocomplete="current-password" placeholder="••••••••" class="w-full pl-8 pr-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
+                    <p id="guest-auth-password-hint" class="hidden text-[10px] text-slate-400 mt-1 font-semibold">密碼至少需 6 個字元</p>
+                </div>
+
+                <!-- 註冊時才顯示：稱呼 -->
+                <div id="guest-auth-name-wrap" class="hidden">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">您的稱呼</label>
+                    <div class="relative">
+                        <i class="fa-regular fa-id-badge absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="guest-auth-name" placeholder="如 王小明" class="w-full pl-8 pr-3.5 py-2 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 font-bold">
+                    </div>
+                </div>
+
+                <p id="guest-auth-error" class="hidden text-[11px] font-bold text-rose-500 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2"></p>
+                <p id="guest-auth-success" class="hidden text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2"></p>
+
+                <div class="flex gap-3 pt-1">
+                    <button onclick="closeModal('guest-auth-modal')" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition-all">
+                        取消
+                    </button>
+                    <button id="guest-auth-submit" onclick="submitGuestAuth()" class="flex-1 py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-xl transition-all shadow-md shadow-brand-100">
+                        登入
+                    </button>
+                </div>
+
+                <p class="text-[10px] text-slate-400 text-center font-semibold leading-relaxed">
+                    <i class="fa-solid fa-shield-halved text-brand-400 mr-1"></i>
+                    登入採 JWT 權杖驗證，訂房請求會攜帶您的存取權杖，由資料庫端驗證身分後才允許寫入。
+                </p>
             </div>
         </div>
     </div>
